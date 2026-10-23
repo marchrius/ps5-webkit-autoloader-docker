@@ -1,0 +1,9 @@
+# Suffissi DNS: dominio esatto e tutti i sottodomini; senza wildcard.
+# Fonte: Al-Azif/ps4-exploit-host, DNS_Rules.Block (solo PlayStation).
+# Copre anche update, CDN, autenticazione, Store e telemetria.
+playstation.net
+playstation.com
+playstation.org
+scea.com
+sonyentertainmentnetwork.com
+sie-rd.com

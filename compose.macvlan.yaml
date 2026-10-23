@@ -1,0 +1,20 @@
+# Override: docker compose -f compose.yaml -f compose.macvlan.yaml up -d --build
+# Oppure usa .env.macvlan.example: COMPOSE_FILE seleziona entrambi i file.
+services:
+  ps5-host:
+    # Una lista vuota senza !reset manterrebbe le porte ereditate dal file base.
+    ports: !reset []
+    networks:
+      ps5-lan:
+        ipv4_address: ${HOST_IP:?Imposta HOST_IP con un IPv4 LAN libero per il container}
+
+networks:
+  ps5-lan:
+    driver: macvlan
+    driver_opts:
+      parent: ${MACVLAN_PARENT:?Imposta MACVLAN_PARENT con interfaccia LAN del dispositivo Docker}
+      macvlan_mode: bridge
+    ipam:
+      config:
+        - subnet: ${MACVLAN_SUBNET:?Imposta MACVLAN_SUBNET, es. 192.168.1.0/24}
+          gateway: ${MACVLAN_GATEWAY:?Imposta MACVLAN_GATEWAY con IP del router}

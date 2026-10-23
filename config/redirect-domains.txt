@@ -1,0 +1,9 @@
+# Eccezioni esatte al blocco, risolte all'IPv4 LAN del server.
+# Guida utente PS5: /document/<lingua>/ps5/index.html
+manuals.playstation.net
+# Pagina PlayStation e test connessione: ingressi aggiuntivi, se aperti dal browser.
+# Non garantiscono che il test di rete della PS5 apra un browser su ogni firmware.
+www.playstation.com
+get.net.playstation.net
+# Alias locale per test manuali da browser.
+ps5-autoloader.test
