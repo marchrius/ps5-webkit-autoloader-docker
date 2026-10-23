@@ -1,15 +1,15 @@
 # Override: docker compose -f compose.yaml -f compose.macvlan.yaml up -d --build
 # Or use .env.macvlan.example: COMPOSE_FILE selects both files.
 services:
-  ps5-host:
+  dns:
     # An empty list without !reset would keep the ports inherited from the base file.
     ports: !reset []
     networks:
-      ps5-lan:
+      lan:
         ipv4_address: ${HOST_IP:?Set HOST_IP to an unused LAN IPv4 address for the container}
 
 networks:
-  ps5-lan:
+  lan:
     driver: macvlan
     driver_opts:
       parent: ${MACVLAN_PARENT:?Set MACVLAN_PARENT to the Docker host LAN interface}

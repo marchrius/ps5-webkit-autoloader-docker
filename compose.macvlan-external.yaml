@@ -1,13 +1,13 @@
 # Alternative to compose.macvlan.yaml: reuse an existing LAN macvlan network.
 # Use with compose.yaml, not with the managed macvlan override.
 services:
-  ps5-host:
+  dns:
     ports: !reset []
     networks:
-      ps5-lan:
+      lan:
         ipv4_address: ${HOST_IP:?Set HOST_IP to an unused IPv4 address in the existing macvlan subnet}
 
 networks:
-  ps5-lan:
+  lan:
     external: true
     name: ${MACVLAN_NETWORK:?Set MACVLAN_NETWORK to the existing Docker macvlan network name}

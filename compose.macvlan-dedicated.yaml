@@ -1,17 +1,17 @@
 # Alternative to the managed/external overrides: a dedicated Docker network
 # on a LAN subnet already registered by another macvlan network.
 services:
-  ps5-host:
+  dns:
     ports: !reset []
     environment:
       # No default gateway is allocated; forwarding needs an on-link resolver.
       UPSTREAM_DNS: ${UPSTREAM_DNS:-}
     networks:
-      ps5-lan:
+      lan:
         ipv4_address: ${HOST_IP:?Set HOST_IP to an unused LAN IPv4 address for this container}
 
 networks:
-  ps5-lan:
+  lan:
     driver: macvlan
     driver_opts:
       parent: ${MACVLAN_PARENT:?Set MACVLAN_PARENT to the existing LAN parent interface}

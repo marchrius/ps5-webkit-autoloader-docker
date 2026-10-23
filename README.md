@@ -48,7 +48,7 @@ The PS5 must use **the container IP** (`HOST_IP`) for DNS and web access.
 By default, a Linux kernel restriction prevents direct communication between
 the host and its macvlan containers. Test DNS and web access from the PS5 or
 another LAN computer, or run
-`docker compose exec ps5-host python /app/healthcheck.py` on the NAS.
+`docker compose exec dns python /app/healthcheck.py` on the NAS.
 To use a DNS service on the same NAS as an upstream resolver, you also need
 a macvlan interface on the NAS or an additional network path. The public
 resolvers in the example avoid this dependency. The internal healthcheck
@@ -172,6 +172,16 @@ Then start the project again with the same Compose command and repeat the querie
 See the [official Colima configuration](https://github.com/abiosoft/colima/blob/main/embedded/defaults/colima.yaml).
 The PS5 requires DNS on port 53. Alternative ports are for computer-based tests;
 the macvlan container on the NAS continues to use ports 53, 80, and 443.
+
+### Updating a deployment after service or network renames
+
+Service and stack-owned network names are resource identities in Compose.
+Before deploying renamed resources with the same static IP or single-address
+pool, remove the previous PS5 stack using its saved original configuration.
+Ensure its previous container and stack-owned macvlan network are removed
+before deploying the updated stack. In Portainer, remove the previous PS5 stack
+and redeploy it with the updated files. Keep unrelated service networks intact;
+external networks are not removed by Compose.
 
 ### Console setup
 
@@ -297,7 +307,7 @@ curl -k --resolve manuals.playstation.net:443:192.168.1.10 \
   https://manuals.playstation.net/document/en/ps5/index.html
 curl -I --resolve www.playstation.com:80:192.168.1.10 http://www.playstation.com/
 # Expected: 302 redirect to https://manuals.playstation.net/
-docker compose exec ps5-host python /app/healthcheck.py
+docker compose exec dns python /app/healthcheck.py
 ```
 
 Run local tests without external Python dependencies:

@@ -1,5 +1,5 @@
 services:
-  ps5-host:
+  dns:
     build:
       context: .
       args:
