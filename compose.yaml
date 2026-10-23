@@ -8,7 +8,7 @@ services:
     image: ps5-webkit-autoloader-dns:local
     restart: unless-stopped
     environment:
-      HOST_IP: ${HOST_IP:?Imposta HOST_IP nel file .env con IPv4 LAN raggiungibile dalla PS5}
+      HOST_IP: ${HOST_IP:?Set HOST_IP in .env to a LAN IPv4 address reachable from the PS5}
       DNS_MODE: ${DNS_MODE:-selective}
       UPSTREAM_DNS: ${UPSTREAM_DNS:-1.1.1.1,9.9.9.9}
       LOG_QUERIES: ${LOG_QUERIES:-false}

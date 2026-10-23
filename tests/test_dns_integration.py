@@ -18,7 +18,7 @@ if not CONFIG.is_dir():
     CONFIG = Path("/config")
 
 
-@unittest.skipUnless(shutil.which("dnsmasq"), "dnsmasq non installato; eseguire nel container")
+@unittest.skipUnless(shutil.which("dnsmasq"), "dnsmasq is not installed; run inside the container")
 class DNSIntegrationTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
@@ -39,14 +39,14 @@ class DNSIntegrationTests(unittest.TestCase):
         self.addCleanup(self.stop)
         for _ in range(40):
             if self.process.poll() is not None:
-                self.fail("dnsmasq non parte con la configurazione generata")
+                self.fail("dnsmasq failed to start with the generated configuration")
             try:
                 self.query("manuals.playstation.net")
                 break
             except OSError:
                 time.sleep(0.05)
         else:
-            self.fail("dnsmasq non risponde")
+            self.fail("dnsmasq is not responding")
 
     def stop(self):
         if self.process.poll() is None:

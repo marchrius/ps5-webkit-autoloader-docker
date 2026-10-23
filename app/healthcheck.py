@@ -11,7 +11,7 @@ def receive_exact(sock, size):
     while len(data) < size:
         chunk = sock.recv(size - len(data))
         if not chunk:
-            raise RuntimeError("Risposta DNS TCP incompleta")
+            raise RuntimeError("Incomplete TCP DNS response")
         data += chunk
     return data
 
@@ -33,7 +33,7 @@ def check():
         qid, flags, _, answers, _, _ = struct.unpack("!6H", data[:12])
         if (qid != 0x5053 or flags & 15 or not answers
                 or not data.endswith(socket.inet_aton(os.environ["HOST_IP"]))):
-            raise RuntimeError("DNS non restituisce HOST_IP per la guida")
+            raise RuntimeError("DNS does not return HOST_IP for the User's Guide")
     for secure in (False, True):
         conn = (http.client.HTTPSConnection("127.0.0.1", 443, timeout=2,
                                           context=ssl._create_unverified_context()) if secure
@@ -41,11 +41,11 @@ def check():
         try:
             # HEAD exercises the same file resolution without downloading the
             # large embedded page or closing a GET while the server is writing.
-            conn.request("HEAD", "/document/it/ps5/index.html",
+            conn.request("HEAD", "/document/en/ps5/index.html",
                          headers={"Host": "manuals.playstation.net"})
             response = conn.getresponse()
             if response.status != 200 or int(response.getheader("Content-Length", "0")) <= 0:
-                raise RuntimeError("Pagina guida non disponibile")
+                raise RuntimeError("User's Guide page is unavailable")
         finally:
             conn.close()
 

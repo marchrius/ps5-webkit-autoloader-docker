@@ -13,11 +13,11 @@ from settings import Settings, request_action
 def build_handler(settings):
     archive = upstream.get_embedded_zip()
     if archive is None or not archive.namelist():
-        raise RuntimeError("Archivio upstream assente o vuoto")
+        raise RuntimeError("Upstream archive is missing or empty")
 
     base_handler = getattr(upstream, "GuideHandler", None) or getattr(upstream, "DualDirHandler", None)
     if base_handler is None:
-        raise RuntimeError("API host upstream non supportata: manca il gestore HTTP")
+        raise RuntimeError("Unsupported upstream host API: HTTP handler is missing")
 
     class Handler(base_handler):
         def send_head(self):
@@ -74,7 +74,7 @@ def main():
                     raise
             threading.Thread(target=server.serve_forever, daemon=True).start()
             servers.append(server)
-        print("HTTP :80 e HTTPS :443 pronti; frontend ufficiale incorporato", flush=True)
+        print("HTTP :80 and HTTPS :443 ready; official frontend embedded", flush=True)
         stop = threading.Event()
         for sig in (signal.SIGTERM, signal.SIGINT):
             signal.signal(sig, lambda *_: stop.set())

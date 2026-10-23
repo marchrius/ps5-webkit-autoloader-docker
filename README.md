@@ -1,238 +1,244 @@
 # PS5 WebKit Autoloader Docker + DNS
 
-Un container sempre in ascolto con DNS UDP/TCP, HTTP e HTTPS. Blocca PSN,
-aggiornamenti e telemetria PlayStation e serve l'installer ufficiale di
+An always-on container providing UDP/TCP DNS, HTTP, and HTTPS. It blocks PSN,
+PlayStation updates, and telemetry, and serves the official installer from
 [itsPLK/ps5-webkit-autoloader](https://github.com/itsPLK/ps5-webkit-autoloader).
-La build scarica la release **v0.6.1**, completa di frontend e payload incorporati:
-non basta copiare la directory frontend del repository, che richiede artefatti generati.
-Non scarica aggiornamenti all'avvio e può funzionare senza Internet dopo la build.
+The build downloads release **v0.6.1**, including its embedded frontend and payloads.
+Copying the repository's frontend directory alone is insufficient because it
+requires generated artifacts. The container does not download updates at startup
+and can run without Internet access after the image has been built.
 
-## Avvio
+## Getting started
 
-### Dispositivo con porta 53 già occupata: macvlan
+### Devices with port 53 already in use: macvlan
 
-Il container riceve un IP LAN dedicato e non pubblica porte sul dispositivo:
-il DNS già presente può continuare a usare la sua porta 53. Richiede un host
-Linux/NAS con Docker rootful, Compose v2 con supporto `!reset`, interfaccia
-Ethernet e una rete che accetti più indirizzi MAC sulla stessa porta.
+The container receives a dedicated LAN IP without publishing ports on the host,
+so the existing DNS service can keep using port 53. This requires a Linux host
+or NAS running rootful Docker, Compose v2 with `!reset` support, an Ethernet
+interface, and a network that accepts multiple MAC addresses on the same port.
 
 ```sh
 cp .env.macvlan.example .env
-# Modifica HOST_IP, MACVLAN_PARENT, MACVLAN_SUBNET e MACVLAN_GATEWAY.
+# Set HOST_IP, MACVLAN_PARENT, MACVLAN_SUBNET, and MACVLAN_GATEWAY.
 docker compose config
 docker compose up -d --build --force-recreate
 docker compose logs -f
 ```
 
-L'esempio usa `HOST_IP=192.168.1.20`, subnet `192.168.1.0/24`, gateway
-`192.168.1.1` e interfaccia `eth0`: verifica i valori sul dispositivo di
-destinazione con `ip -br addr` e `ip route`. L'interfaccia potrebbe chiamarsi
-`eno1`, `bond0`, `ovs_eth0` o altro. L'IP del container deve essere libero,
-diverso da quello del NAS, escluso dal pool DHCP e appartenere alla subnet.
-Se il NAS è `192.168.1.10`, assegna al container un altro IP libero.
+The example uses `HOST_IP=192.168.1.20`, subnet `192.168.1.0/24`, gateway
+`192.168.1.1`, and interface `eth0`. Check these values on the target device
+using `ip -br addr` and `ip route`. The interface may be named `eno1`, `bond0`,
+`ovs_eth0`, or something else. The container IP must be unused, different from
+the NAS IP, excluded from the DHCP pool, and within the subnet.
+If the NAS uses `192.168.1.10`, assign another unused IP to the container.
 
-`COMPOSE_FILE` nel file di esempio carica automaticamente `compose.yaml` e
-`compose.macvlan.yaml`. Se usi un gestore NAS che ignora questa variabile,
-configura entrambi i file nel progetto oppure esegui esplicitamente:
+`COMPOSE_FILE` in the example automatically loads `compose.yaml` and
+`compose.macvlan.yaml`. If your NAS management interface ignores this variable,
+configure both files in the project or run the following command explicitly:
 
 ```sh
 docker compose -f compose.yaml -f compose.macvlan.yaml up -d --build --force-recreate
 ```
 
-Nella configurazione risultante non deve esserci una sezione `ports` per il
-servizio. Non basta aggiungere una rete macvlan al file base: l'override
-rimuove anche le porte pubblicate. `BIND_IP` non viene usato in questa modalità.
-La PS5 deve usare come DNS e destinazione web **l'IP del container** (`HOST_IP`).
+The resulting service configuration must not contain a `ports` section.
+Adding a macvlan network to the base file alone is insufficient: the override
+also removes the published ports. `BIND_IP` is unused in this mode.
+The PS5 must use **the container IP** (`HOST_IP`) for DNS and web access.
 
-Per impostazione del kernel, host e container macvlan non comunicano
-direttamente: prova DNS/web dalla PS5 o da un altro computer LAN, oppure usa
-`docker compose exec ps5-host python /app/healthcheck.py` sul NAS.
-Se usi come upstream DNS il servizio sullo stesso NAS, dovrai predisporre
-anche un'interfaccia macvlan sul NAS o un percorso di rete aggiuntivo;
-gli upstream pubblici dell'esempio evitano questa dipendenza. L'healthcheck
-interno continua a funzionare tramite loopback.
-Macvlan non è supportato da Docker Desktop per Mac/Windows; questo progetto
-va avviato sul dispositivo Linux di destinazione. Vedi la
-[documentazione Docker macvlan](https://docs.docker.com/engine/network/drivers/macvlan/).
+By default, a Linux kernel restriction prevents direct communication between
+the host and its macvlan containers. Test DNS and web access from the PS5 or
+another LAN computer, or run
+`docker compose exec ps5-host python /app/healthcheck.py` on the NAS.
+To use a DNS service on the same NAS as an upstream resolver, you also need
+a macvlan interface on the NAS or an additional network path. The public
+resolvers in the example avoid this dependency. The internal healthcheck
+continues to work over loopback.
+Macvlan is not supported by Docker Desktop for Mac or Windows; run this
+configuration on the target Linux device. See the
+[Docker macvlan documentation](https://docs.docker.com/engine/network/drivers/macvlan/).
 
-### Alternativa con porte pubblicate
+### Alternative: published ports
 
-Richiede Docker con Compose v2 e un IPv4 LAN stabile per il server.
-Usa questa variante quando le porte del dispositivo sono disponibili.
+This configuration requires Docker with Compose v2 and a stable LAN IPv4
+address for the server. Use it when the host ports are available.
 
 ```sh
 cp .env.example .env
-# Modifica HOST_IP in .env: IPv4 LAN del computer/NAS, ad esempio 192.168.1.10.
+# Set HOST_IP in .env to the computer/NAS LAN IPv4 address, e.g. 192.168.1.10.
 docker compose up -d --build
 docker compose logs -f
 ```
 
-### Collaudo locale da macOS con porte standard occupate
+### Local macOS testing when standard ports are in use
 
-Usa porte alte per evitare conflitti con i servizi del Mac o della VM Colima.
-La configurazione macvlan di `.env` rimane separata:
+Use high ports to avoid conflicts with services on the Mac or the Colima VM.
+The macvlan configuration in `.env` remains separate:
 
 ```sh
 cp .env.macos.example .env.macos
-# Imposta HOST_IP all'IPv4 LAN del Mac.
+# Set HOST_IP to the Mac's LAN IPv4 address.
 docker compose --env-file .env.macos -f compose.yaml up -d --build --force-recreate
 dig @127.0.0.1 -p 1053 manuals.playstation.net A +short +time=2 +tries=1
 dig +tcp @127.0.0.1 -p 1053 manuals.playstation.net A +short +time=2 +tries=1
-curl --fail http://127.0.0.1:8080/document/it/ps5/index.html -o /dev/null
+curl --fail http://127.0.0.1:8080/document/en/ps5/index.html -o /dev/null
 curl --fail -k --resolve manuals.playstation.net:8443:127.0.0.1 \
-  https://manuals.playstation.net:8443/document/it/ps5/index.html -o /dev/null
+  https://manuals.playstation.net:8443/document/en/ps5/index.html -o /dev/null
 ```
 
-Le risposte DNS devono restituire `HOST_IP` e le richieste web devono riuscire.
-Puoi aprire `http://127.0.0.1:8080/` nel browser. Per i test HTTPS usa il percorso
-della Guida indicato sopra: gli ingressi secondari reindirizzano alla porta 443
-standard e non sono adatti alla prova con porte alte. Se loopback funziona ma
-l'IP LAN del Mac no, verifica firewall e inoltro delle porte di Colima.
-Con Colima, `portForwarder: ssh` inoltra solo TCP: in quel caso `dig +tcp`
-funziona mentre `dig` UDP va in timeout. Per collaudare anche UDP puoi usare
-il forwarder `grpc` (indicato come sperimentale da Colima):
+DNS queries should return `HOST_IP`, and web requests should succeed.
+Open `http://127.0.0.1:8080/` in your browser. For HTTPS testing, use the User's
+Guide path above: secondary entry domains redirect to standard port 443 and
+are unsuitable for testing with high ports. If loopback works but the Mac's
+LAN IP does not, check the firewall and Colima port forwarding.
+With Colima, `portForwarder: ssh` forwards TCP only: `dig +tcp` works while
+UDP queries time out. To test UDP as well, use the `grpc` forwarder, which
+Colima marks as experimental:
 
 ```sh
-# Il riavvio interrompe temporaneamente anche gli altri container di Colima.
+# Restarting Colima temporarily interrupts its other containers as well.
 colima stop
 colima start --port-forwarder grpc
 ```
 
-Poi riavvia il progetto con lo stesso comando Compose e ripeti le query.
-Vedi la [configurazione ufficiale Colima](https://github.com/abiosoft/colima/blob/main/embedded/defaults/colima.yaml).
-La PS5 richiede DNS su porta 53: le porte alternative servono al collaudo da
-PC, mentre sul NAS macvlan il container continua a usare 53/80/443.
+Then start the project again with the same Compose command and repeat the queries.
+See the [official Colima configuration](https://github.com/abiosoft/colima/blob/main/embedded/defaults/colima.yaml).
+The PS5 requires DNS on port 53. Alternative ports are for computer-based tests;
+the macvlan container on the NAS continues to use ports 53, 80, and 443.
 
-### Configurazione della console
+### Console setup
 
-Imposta sulla PS5 il DNS primario a `HOST_IP`. Per il secondario usa lo stesso IP
-se consentito, oppure un secondo server con le stesse regole. Non usare un DNS
-pubblico come secondario: potrebbe aggirare il blocco. Mantieni il gateway del router.
-Disabilita gli aggiornamenti automatici nelle impostazioni della console.
+Set the PS5's primary DNS server to `HOST_IP`. For secondary DNS, use the same
+IP if allowed, or a second server with the same rules. Do not use a public DNS
+server as the secondary: it could bypass the block. Keep the router as the gateway.
+Disable automatic updates in the console settings.
 
-Apri **Impostazioni → Guida per l'utente** (il percorso esatto varia con il firmware).
-La pagina `https://manuals.playstation.net/document/it/ps5/index.html` viene servita
-dal container. Segui l'installer upstream; dopo l'installazione usa il collegamento
-WebKit Autoloader creato sulla console. Il container può restare attivo come filtro DNS.
-Il supporto al firmware e l'esito dell'installazione dipendono dalla release upstream.
+Open **Settings → User's Guide**; the exact menu path depends on the firmware.
+The container serves `https://manuals.playstation.net/document/en/ps5/index.html`.
+Follow the upstream installer, then use the WebKit Autoloader shortcut created
+on the console. The container can remain running as a DNS filter.
+Firmware support and installation results depend on the upstream release.
 
-Nella variante con porte pubblicate, le porte **53 UDP/TCP, 80 TCP e 443 TCP** devono essere libere e raggiungibili
-dalla console. Compose le pubblica su `BIND_IP`, per default `0.0.0.0` (tutte
-le interfacce IPv4). `HOST_IP` è invece l'indirizzo restituito dal DNS alla PS5.
-Su Linux nativo puoi impostare `BIND_IP` all'IP LAN del server per limitare il bind.
-Un servizio DNS già in ascolto su tutte le interfacce può occupare la porta 53.
-Il client PS5 non permette porte DNS alternative.
-Su macOS/Windows l'IP deve appartenere al computer, non alla VM Docker; verifica
-anche firewall e inoltro UDP di Docker Desktop/Colima. Su Linux il bridge con
-porte pubblicate è sufficiente; non occorre `network_mode: host`.
+With published ports, **53 UDP/TCP, 80 TCP, and 443 TCP** must be available and
+reachable from the console. Compose publishes them on `BIND_IP`, which defaults
+to `0.0.0.0` (all IPv4 interfaces). `HOST_IP` is the address returned to the PS5
+by DNS. On native Linux, set `BIND_IP` to the server's LAN IP to restrict binding.
+A DNS service listening on all interfaces can already occupy port 53.
+The PS5 does not support alternative DNS ports.
+On macOS or Windows, use the computer's IP rather than the Docker VM's IP;
+also check the firewall and Docker Desktop/Colima UDP forwarding.
+On Linux, bridge networking with published ports is sufficient;
+`network_mode: host` is unnecessary.
 
-Se Docker restituisce `cannot assign requested address`, l'indirizzo scelto
-per il bind non è disponibile sul sistema che esegue il daemon (per esempio
-la VM di Colima). Imposta `BIND_IP=0.0.0.0` e ricrea il container con
-`docker compose up -d --force-recreate`. Mantieni `HOST_IP` uguale all'IPv4
-che la PS5 può effettivamente raggiungere, non all'IP interno del container.
+If Docker reports `cannot assign requested address`, the bind address is not
+available on the system running the daemon, such as the Colima VM.
+Set `BIND_IP=0.0.0.0` and recreate the container with
+`docker compose up -d --force-recreate`. Keep `HOST_IP` set to the IPv4 address
+the PS5 can actually reach, rather than the container's internal bridge IP.
 
-`restart: unless-stopped` riavvia il container dopo crash o riavvio del daemon.
-Docker deve avviarsi automaticamente con il server. Il supervisore termina il
-container se DNS/web si fermano o falliscono tre controlli consecutivi; Docker
-lo riavvia. Il solo stato Docker `unhealthy` normalmente non provocherebbe un riavvio.
+`restart: unless-stopped` restarts the container after a crash or daemon restart.
+Docker must start automatically with the server. The supervisor exits if DNS
+or web services stop or fail three consecutive healthchecks, allowing Docker
+to restart the container. Docker's `unhealthy` status alone would not normally
+trigger a restart.
 
-## Domini e pagine gestite
+## Managed domains and pages
 
-Le liste in `config/` sono modificabili e montate in sola lettura nel container.
-Riavvia con `docker compose restart` dopo una modifica.
+The lists in `config/` are editable and mounted read-only inside the container.
+Run `docker compose restart` after changing them.
 
-| Dominio | Comportamento |
+| Domain | Behavior |
 | --- | --- |
-| `manuals.playstation.net` | Serve il frontend upstream tramite `/document/<lingua>/ps5/`; i percorsi degli altri file dipendono dalla release |
-| `www.playstation.com` | Reindirizza le richieste web alla radice della Guida locale |
-| `get.net.playstation.net` | Reindirizza le richieste web alla Guida locale; endpoint storico dei test di connessione |
-| `ps5-autoloader.test` | Alias locale che reindirizza alla Guida |
-| `HOST_IP` (IP del container con macvlan) | Accesso diretto al frontend, utile per prove via HTTP |
+| `manuals.playstation.net` | Serves the upstream frontend through `/document/<language>/ps5/`; other file paths depend on the release |
+| `www.playstation.com` | Redirects web requests to the local User's Guide root |
+| `get.net.playstation.net` | Redirects web requests to the local User's Guide; a historical connection-test endpoint |
+| `ps5-autoloader.test` | Local alias that redirects to the User's Guide |
+| `HOST_IP` (the container IP with macvlan) | Direct frontend access, useful for HTTP tests |
 
-Gli ingressi diversi dalla Guida sono aggiuntivi: il test di connessione può
-limitarsi a fallire senza aprire un browser su PS5. Il metodo di installazione
-documentato da upstream resta la Guida utente. Non vengono simulati un accesso
-PSN valido o un test di velocità riuscito. Gli endpoint aggiornamenti, `post` ed
-`ena` restano bloccati.
+Entry domains other than the User's Guide are additional options: the connection
+test may simply fail without opening a browser on the PS5. The installation
+method documented upstream remains the User's Guide. This service does not
+simulate successful PSN access or a successful speed test.
+Update endpoints, `post`, and `ena` remain blocked.
 
-`blocked-domains.txt` contiene i suffissi `playstation.net`, `playstation.com`,
-`playstation.org`, `scea.com`, `sonyentertainmentnetwork.com`, `sie-rd.com`.
-Il blocco include dominio e sottodomini, quindi anche tutti i server regionali
-`fXX01`, `dXX01`, `hXX01.ps5.update.playstation.net`, CDN, Store e autenticazione.
-Le eccezioni di `redirect-domains.txt` creano record A locali esatti; per esse
-AAAA e altri tipi DNS non vengono inoltrati. Non è una lista di singoli IP CDN.
+`blocked-domains.txt` contains the suffixes `playstation.net`, `playstation.com`,
+`playstation.org`, `scea.com`, `sonyentertainmentnetwork.com`, and `sie-rd.com`.
+Blocking covers each domain and its subdomains, including all regional
+`fXX01`, `dXX01`, and `hXX01.ps5.update.playstation.net` servers, CDN, Store,
+and authentication services. Entries in `redirect-domains.txt` create exact
+local A records. AAAA and other DNS query types for those domains are not
+forwarded upstream. This is not a list of individual CDN IP addresses.
 
-In `.env`:
+Settings in `.env`:
 
-| Variabile | Significato |
+| Variable | Meaning |
 | --- | --- |
-| `HOST_IP` | Obbligatoria: IP dedicato al container in macvlan, IP del server con porte pubblicate |
-| `COMPOSE_FILE` | In macvlan: `compose.yaml:compose.macvlan.yaml` su Linux |
-| `MACVLAN_PARENT` | Interfaccia LAN del dispositivo Docker, es. `eth0` o `bond0` |
-| `MACVLAN_SUBNET` | Subnet LAN in formato CIDR, es. `192.168.1.0/24` |
-| `MACVLAN_GATEWAY` | IPv4 del router della LAN |
-| `BIND_IP` | Solo con porte pubblicate: indirizzo di bind, default `0.0.0.0` |
-| `DNS_PORT`, `HTTP_PORT`, `HTTPS_PORT` | Solo con porte pubblicate: default 53, 80 e 443; per test Mac 1053, 8080 e 8443 |
-| `DNS_MODE=selective` | Blocca i suffissi configurati, inoltra gli altri nomi agli upstream |
-| `DNS_MODE=offline` | Blocca tutti i nomi tranne le eccezioni locali; nessun inoltro DNS |
-| `UPSTREAM_DNS` | IP dei resolver separati da virgole, default `1.1.1.1,9.9.9.9` |
-| `LOG_QUERIES=true` | Registra le richieste DNS nei log Docker |
-| `AUTOLOADER_VERSION` | Release stabile scaricata durante la build |
-| `AUTOLOADER_SHA256` | Facoltativo: digest atteso del file host `.py` |
+| `HOST_IP` | Required: dedicated container IP with macvlan, or server IP with published ports |
+| `COMPOSE_FILE` | With macvlan on Linux: `compose.yaml:compose.macvlan.yaml` |
+| `MACVLAN_PARENT` | LAN interface on the Docker host, e.g. `eth0` or `bond0` |
+| `MACVLAN_SUBNET` | LAN subnet in CIDR notation, e.g. `192.168.1.0/24` |
+| `MACVLAN_GATEWAY` | LAN router IPv4 address |
+| `BIND_IP` | Published ports only: bind address, default `0.0.0.0` |
+| `DNS_PORT`, `HTTP_PORT`, `HTTPS_PORT` | Published ports only: defaults 53, 80, and 443; use 1053, 8080, and 8443 for Mac tests |
+| `DNS_MODE=selective` | Blocks configured suffixes and forwards other names upstream |
+| `DNS_MODE=offline` | Blocks all names except local exceptions; no DNS forwarding |
+| `UPSTREAM_DNS` | Comma-separated resolver IPs, default `1.1.1.1,9.9.9.9` |
+| `LOG_QUERIES=true` | Records DNS queries in Docker logs |
+| `AUTOLOADER_VERSION` | Stable release downloaded during the build |
+| `AUTOLOADER_SHA256` | Optional: expected digest of the release's host `.py` file |
 
-Per applicare modifiche a `.env`: `docker compose up -d --build`.
-Per aggiungere un ingresso browser, aggiungi il suo dominio esatto a
-`redirect-domains.txt`: verrà risolto localmente e rimandato alla Guida canonica.
+To apply `.env` changes, run `docker compose up -d --build`.
+To add a browser entry domain, add its exact name to `redirect-domains.txt`.
+It will resolve locally and redirect to the canonical User's Guide origin.
 
-## HTTPS e limiti del blocco
+## HTTPS and blocking limitations
 
-Il container genera un certificato autofirmato per i domini configurati a ogni
-avvio, evitando di riutilizzare la chiave privata pubblica inclusa nella release.
-Un browser su PC mostrerà un avviso; l'accettazione sulla console dipende da
-firmware e contesto browser, come per l'host upstream. DNS da solo non rende un
-certificato attendibile e non supera HSTS/certificate pinning. Preferisci la
-Guida utente; non è garantita l'intercettazione trasparente di qualsiasi pagina HTTPS.
+The container generates a self-signed certificate for the configured domains
+at each startup, avoiding reuse of the public private key embedded in the release.
+A computer browser will display a warning. Console acceptance depends on the
+firmware and browser context, as with the upstream host. DNS alone does not
+make a certificate trusted or bypass HSTS/certificate pinning. Prefer the User's
+Guide; transparent interception of every HTTPS page is not guaranteed.
 
-PSN, Store e servizi correlati smetteranno di funzionare. Il filtro protegge le
-richieste che passano da questo DNS: non è un firewall e non blocca IP diretti,
-DNS cifrato, resolver alternativi o aggiornamenti già scaricati. Per isolamento
-completo applica anche regole sul router e considera IPv6/DNS annunciati via RA/DHCPv6.
-Anche `offline` riguarda le risoluzioni DNS, non tutto il traffico IP della console.
-Non esporre il servizio con port forwarding su Internet; è pensato per la LAN.
+PSN, Store, and related services will stop working. The filter applies to
+queries sent through this DNS server. It is not a firewall and does not block
+direct IP access, encrypted DNS, alternative resolvers, or updates already
+downloaded. For complete isolation, also apply router rules and account for
+IPv6/DNS advertised through RA/DHCPv6. The `offline` mode also concerns DNS
+resolution, rather than all console IP traffic.
+Do not expose the service through Internet port forwarding; it is intended for LAN use.
 
-## Verifica
+## Verification
 
-Sostituisci `192.168.1.10` con `HOST_IP`:
+Replace `192.168.1.10` with `HOST_IP`:
 
 ```sh
 docker compose ps
 dig @192.168.1.10 manuals.playstation.net A +short
-# Atteso: 192.168.1.10
+# Expected: 192.168.1.10
 dig +tcp @192.168.1.10 manuals.playstation.net A +short
 dig @192.168.1.10 manuals.playstation.net AAAA
-# Atteso: nessun AAAA
+# Expected: no AAAA record
 dig @192.168.1.10 feu01.ps5.update.playstation.net A
-# Atteso: NXDOMAIN
+# Expected: NXDOMAIN
 dig @192.168.1.10 telemetry-console.api.playstation.com AAAA
-# Atteso: NXDOMAIN
+# Expected: NXDOMAIN
 dig @192.168.1.10 example.org A
-# selective: risposta upstream; offline: NXDOMAIN
+# selective: upstream response; offline: NXDOMAIN
 curl -k --resolve manuals.playstation.net:443:192.168.1.10 \
-  https://manuals.playstation.net/document/it/ps5/index.html
+  https://manuals.playstation.net/document/en/ps5/index.html
 curl -I --resolve www.playstation.com:80:192.168.1.10 http://www.playstation.com/
-# Atteso: 302 verso https://manuals.playstation.net/
+# Expected: 302 redirect to https://manuals.playstation.net/
 docker compose exec ps5-host python /app/healthcheck.py
 ```
 
-Test locali senza dipendenze Python esterne:
+Run local tests without external Python dependencies:
 
 ```sh
 python3 -m unittest discover -s tests -v
 ```
 
-I test DNS reali vengono saltati se `dnsmasq` non è installato. Per eseguirli con
-il binario dell'immagine dopo la build, senza pubblicare porte:
+Real DNS tests are skipped if `dnsmasq` is not installed. To run them using
+the image's binary after building, without publishing ports:
 
 ```sh
 docker run --rm --entrypoint python \
@@ -240,33 +246,33 @@ docker run --rm --entrypoint python \
   -m unittest discover -s /app/tests -v
 ```
 
-## Aggiornamento e provenienza
+## Updates and provenance
 
-Per aggiornare, scegli una release stabile effettivamente pubblicata in `.env` e ricostruisci.
-Lo script verifica il tag tramite API GitHub e usa il nome dell'artefatto Python
-pubblicato, verificando anche il digest GitHub quando disponibile. Una versione
-inesistente causa un errore esplicito: non viene sostituita automaticamente.
-L'integrazione gestisce le API HTTP delle release 0.5.2 e 0.6.1.
-Non viene
-usato un riferimento mobile `latest`. Il digest effettivo e l'URL scaricato sono
-in `/app/UPSTREAM.txt`; la licenza upstream è in `/app/LICENSE.upstream`.
-Puoi impostare il digest atteso da una fonte verificata in `AUTOLOADER_SHA256`.
-Il codice di integrazione non modifica i file frontend/payload della release.
-La distribuzione di immagini con il software upstream GPL-3.0 deve rispettarne
-la licenza e gli obblighi relativi al codice sorgente corrispondente.
+To update, select a published stable release in `.env` and rebuild.
+The script checks the tag through the GitHub API, uses the published Python
+asset's name, and verifies the GitHub digest when available. A nonexistent
+version produces an explicit error and is not replaced automatically.
+The integration handles the HTTP APIs of releases 0.5.2 and 0.6.1.
+It does not use a moving `latest` reference. The actual digest and download URL
+are recorded in `/app/UPSTREAM.txt`; the upstream license is in `/app/LICENSE.upstream`.
+You can set a digest from a verified source in `AUTOLOADER_SHA256`.
+The integration does not modify the release's frontend or payload files.
+Distributing images containing the GPL-3.0 upstream software requires compliance
+with its license and corresponding source-code obligations.
 
-## Licenza
+## License
 
-Il codice di integrazione di questo repository è distribuito con licenza
-**GNU General Public License v3.0** (`GPL-3.0-only`). Il testo completo è in
-[LICENSE](LICENSE), incluso anche nell'immagine in `/app/LICENSE`.
-Il progetto upstream e i componenti di terze parti mantengono le rispettive
-licenze e attribuzioni; la licenza upstream scaricata è in `/app/LICENSE.upstream`.
+The integration code in this repository is distributed under the
+**GNU General Public License v3.0** (`GPL-3.0-only`). The complete text is in
+[LICENSE](LICENSE), also included in the image at `/app/LICENSE`.
+The upstream project and third-party components retain their respective
+licenses and attribution notices. The downloaded upstream license is at
+`/app/LICENSE.upstream`.
 
-Fonti consultate il 23 ottobre 2026:
+Sources consulted on October 23, 2026:
 
-- [Release ufficiale v0.6.1 e artefatti](https://github.com/itsPLK/ps5-webkit-autoloader/releases/tag/v0.6.1).
-- [Host ufficiale della stessa versione](https://github.com/itsPLK/ps5-webkit-autoloader/blob/v0.6.1/pc-host/host.py): gestione Guida e contenuti incorporati.
-- [Configurazione Al-Azif](https://github.com/Al-Azif/ps4-exploit-host/blob/master/settings.json): base dei suffissi PlayStation bloccati e ingressi web.
-- [Ricerca sui domini PS5](https://github.com/Yelodress/understanding-ps5-domains): server regionali e telemetria; alcune descrizioni sono dichiarate non verificate dall'autore.
-- [Manuale dnsmasq](https://thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html): zone locali e record statici.
+- [Official v0.6.1 release and assets](https://github.com/itsPLK/ps5-webkit-autoloader/releases/tag/v0.6.1).
+- [Official host for the same version](https://github.com/itsPLK/ps5-webkit-autoloader/blob/v0.6.1/pc-host/host.py): User's Guide handling and embedded content.
+- [Al-Azif configuration](https://github.com/Al-Azif/ps4-exploit-host/blob/master/settings.json): PlayStation blocking suffixes and web entry domains.
+- [PS5 domain research](https://github.com/Yelodress/understanding-ps5-domains): regional servers and telemetry; the author marks some descriptions as unverified.
+- [dnsmasq manual](https://thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html): local zones and static records.

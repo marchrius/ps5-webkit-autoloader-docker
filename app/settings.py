@@ -16,7 +16,7 @@ def read_domains(path):
             re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", part)
             for part in name.split(".")
         ):
-            raise ValueError(f"Dominio non valido in {path}: {name!r}")
+            raise ValueError(f"Invalid domain in {path}: {name!r}")
         if name not in domains:
             domains.append(name)
     return tuple(domains)
@@ -36,23 +36,23 @@ class Settings:
         env = os.environ if env is None else env
         ip = ipaddress.IPv4Address(env.get("HOST_IP", ""))
         if ip.is_loopback or ip.is_unspecified or ip.is_multicast or str(ip) == "255.255.255.255":
-            raise ValueError("HOST_IP deve essere un IPv4 LAN raggiungibile dalla PS5")
+            raise ValueError("HOST_IP must be a LAN IPv4 address reachable from the PS5")
         mode = env.get("DNS_MODE", "selective")
         if mode not in ("selective", "offline"):
-            raise ValueError("DNS_MODE deve essere selective oppure offline")
+            raise ValueError("DNS_MODE must be selective or offline")
         upstream = tuple(str(ipaddress.ip_address(x.strip())) for x in
                          env.get("UPSTREAM_DNS", "1.1.1.1,9.9.9.9").split(",") if x.strip())
         if mode == "selective" and not upstream:
-            raise ValueError("UPSTREAM_DNS non può essere vuoto in modalità selective")
+            raise ValueError("UPSTREAM_DNS cannot be empty in selective mode")
         if any(ipaddress.ip_address(x).is_loopback or x == str(ip)
                or ipaddress.ip_address(x).is_unspecified for x in upstream):
-            raise ValueError("UPSTREAM_DNS non deve puntare a questo server o a loopback")
+            raise ValueError("UPSTREAM_DNS must not point to this server or loopback")
         redirects = read_domains(directory / "redirect-domains.txt")
         if "manuals.playstation.net" not in redirects:
-            raise ValueError("Mantieni manuals.playstation.net tra i redirect")
+            raise ValueError("Keep manuals.playstation.net in the redirect list")
         logging = env.get("LOG_QUERIES", "false").lower()
         if logging not in ("true", "false"):
-            raise ValueError("LOG_QUERIES deve essere true oppure false")
+            raise ValueError("LOG_QUERIES must be true or false")
         return cls(str(ip), mode, upstream, read_domains(directory / "blocked-domains.txt"),
                    redirects, logging == "true")
 

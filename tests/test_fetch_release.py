@@ -22,14 +22,14 @@ class ReleaseTests(unittest.TestCase):
     @patch("fetch_release.urllib.request.urlopen")
     def test_missing_release_explains_env_fix(self, urlopen):
         urlopen.side_effect = urllib.error.HTTPError("url", 404, "Not found", {}, None)
-        with self.assertRaisesRegex(ValueError, "v0.6.2 non pubblicata.*AUTOLOADER_VERSION"):
+        with self.assertRaisesRegex(ValueError, "v0.6.2 is not published.*AUTOLOADER_VERSION"):
             release_asset("0.6.2")
 
     @patch("fetch_release.urllib.request.urlopen")
     def test_executable_only_release_fails(self, urlopen):
         urlopen.return_value = io.BytesIO(json.dumps({"assets": [
             {"name": "webkit-autoloader-host.exe"}]}).encode())
-        with self.assertRaisesRegex(ValueError, "trovati 0"):
+        with self.assertRaisesRegex(ValueError, "found 0"):
             release_asset("0.6.1")
 
     @patch("fetch_release.urllib.request.urlopen")
@@ -37,7 +37,7 @@ class ReleaseTests(unittest.TestCase):
         urlopen.return_value = io.BytesIO(json.dumps({"assets": [
             {"name": "webkit-autoloader-host_a.py"},
             {"name": "webkit-autoloader-host_b.py"}]}).encode())
-        with self.assertRaisesRegex(ValueError, "trovati 2"):
+        with self.assertRaisesRegex(ValueError, "found 2"):
             release_asset("0.6.1")
 
 

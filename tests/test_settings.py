@@ -61,7 +61,7 @@ class SettingsTests(unittest.TestCase):
 
     def test_only_configured_hosts_are_served(self):
         settings = self.load()
-        self.assertEqual(request_action("manuals.playstation.net:443", "/document/it/ps5/index.html", settings), "serve")
+        self.assertEqual(request_action("manuals.playstation.net:443", "/document/en/ps5/index.html", settings), "serve")
         self.assertEqual(request_action("MANUALS.PLAYSTATION.NET", "/app/app.js", settings), "serve")
         self.assertEqual(request_action("192.168.1.10", "/", settings), "serve")
         for host in ("evilmanuals.playstation.net", "manuals.playstation.net.evil.com", "", "evil.com"):

@@ -15,8 +15,8 @@ def main():
     conf = Path("/run/dnsmasq.conf")
     conf.write_text(settings.dnsmasq_config())
     subprocess.run(["dnsmasq", "--test", f"--conf-file={conf}"], check=True)
-    print(f"DNS {settings.mode}; redirect a {settings.host_ip}; "
-          f"{len(settings.blocked)} suffissi bloccati", flush=True)
+    print(f"DNS {settings.mode}; redirect to {settings.host_ip}; "
+          f"{len(settings.blocked)} blocked suffixes", flush=True)
     stop = threading.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: stop.set())
@@ -29,7 +29,7 @@ def main():
         failures = 0
         while not stop.wait(1):
             if any(child.poll() is not None for child in children):
-                print("Un servizio è terminato; riavvio del container richiesto", flush=True)
+                print("A service exited; container restart required", flush=True)
                 result = 1
                 break
             if time.monotonic() >= next_check:
@@ -38,7 +38,7 @@ def main():
                     failures = 0
                 except Exception as exc:
                     failures += 1
-                    print(f"Controllo servizi fallito ({failures}/3): {exc}", flush=True)
+                    print(f"Service healthcheck failed ({failures}/3): {exc}", flush=True)
                 if failures >= 3:
                     result = 1
                     break

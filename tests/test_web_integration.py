@@ -16,7 +16,7 @@ if not CONFIG.is_dir():
     CONFIG = Path("/config")
 
 
-@unittest.skipUnless(AVAILABLE, "release upstream non installata; eseguire nel container")
+@unittest.skipUnless(AVAILABLE, "upstream release is not installed; run inside the container")
 class WebIntegrationTests(unittest.TestCase):
     def setUp(self):
         import web
@@ -43,13 +43,13 @@ class WebIntegrationTests(unittest.TestCase):
             conn.close()
 
     def test_guide_serves_embedded_index(self):
-        status, headers, body = self.get("/document/it/ps5/index.html")
+        status, headers, body = self.get("/document/en/ps5/index.html")
         self.assertEqual(status, 200)
         self.assertIn("text/html", headers["Content-Type"])
         self.assertTrue(body)
 
     def test_healthcheck_head_has_content_length_without_body(self):
-        status, headers, body = self.get("/document/it/ps5/index.html", method="HEAD")
+        status, headers, body = self.get("/document/en/ps5/index.html", method="HEAD")
         self.assertEqual(status, 200)
         self.assertGreater(int(headers["Content-Length"]), 128)
         self.assertEqual(body, b"")
