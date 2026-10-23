@@ -248,6 +248,18 @@ docker run --rm --entrypoint python \
 
 ## Updates and provenance
 
+### Image size
+
+The image uses a multi-stage build. Python 3.13 comes from the official
+`python:3.13-alpine3.24` image; the final base is `alpine:3.24` with the same ABI.
+Only the trimmed Python installation, its native runtime dependencies, the
+service packages, application files, and upstream release artifacts are copied
+into the final image. `pip`, `ensurepip`, Python development headers, and build
+configuration files are removed before that copy, so they do not remain in
+lower image layers. The Python standard library and HTTPS support are retained.
+
+### Release updates
+
 To update, select a published stable release in `.env` and rebuild.
 The script checks the tag through the GitHub API, uses the published Python
 asset's name, and verifies the GitHub digest when available. A nonexistent
