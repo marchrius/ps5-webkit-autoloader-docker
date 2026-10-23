@@ -14,6 +14,8 @@ from settings import Settings
 from healthcheck import receive_exact
 
 CONFIG = Path(__file__).resolve().parents[1] / "config"
+if not CONFIG.is_dir():
+    CONFIG = Path("/config")
 
 
 @unittest.skipUnless(shutil.which("dnsmasq"), "dnsmasq non installato; eseguire nel container")
@@ -28,6 +30,7 @@ class DNSIntegrationTests(unittest.TestCase):
         settings = Settings.load({"HOST_IP": "192.168.1.10", "DNS_MODE": "offline"}, CONFIG)
         conf = settings.dnsmasq_config().replace("port=53\n", f"port={self.port}\n")
         conf = conf.replace("user=root\n", "")
+        conf = conf.replace("group=root\n", "")
         conf = conf.replace("pid-file=/run/dnsmasq.pid", "pid-file=")
         path = Path(self.directory.name) / "dnsmasq.conf"
         path.write_text(conf)
@@ -76,7 +79,12 @@ class DNSIntegrationTests(unittest.TestCase):
         for domain in ("playstation.net", "feu01.ps5.update.playstation.net",
                        "telemetry-console.api.playstation.com", "example.org"):
             for qtype in (1, 28, 65):
-                self.assertEqual(self.query(domain, qtype)[:2], (3, 0))
+                with self.subTest(domain=domain, qtype=qtype):
+                    code, answers, _ = self.query(domain, qtype)
+                    self.assertEqual(answers, 0)
+                    # A parent of configured local host records can exist as an
+                    # empty nonterminal (NOERROR/NODATA), still with no address.
+                    self.assertIn(code, (0, 3) if domain == "playstation.net" else (3,))
 
     def test_ipv6_and_https_records_cannot_bypass_redirect(self):
         for qtype in (28, 65):

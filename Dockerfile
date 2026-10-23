@@ -1,6 +1,6 @@
 FROM python:3.13-alpine
 
-ARG AUTOLOADER_VERSION=0.5.2
+ARG AUTOLOADER_VERSION=0.6.1
 ARG AUTOLOADER_SHA256=""
 LABEL org.opencontainers.image.title="PS5 WebKit Autoloader DNS host" \
       org.opencontainers.image.description="Local PSN DNS blocking and official WebKit installer hosting"

@@ -3,7 +3,7 @@
 Un container sempre in ascolto con DNS UDP/TCP, HTTP e HTTPS. Blocca PSN,
 aggiornamenti e telemetria PlayStation e serve l'installer ufficiale di
 [itsPLK/ps5-webkit-autoloader](https://github.com/itsPLK/ps5-webkit-autoloader).
-La build scarica la release **v0.5.2**, completa di frontend e payload incorporati:
+La build scarica la release **v0.6.1**, completa di frontend e payload incorporati:
 non basta copiare la directory frontend del repository, che richiede artefatti generati.
 Non scarica aggiornamenti all'avvio e può funzionare senza Internet dopo la build.
 
@@ -108,7 +108,7 @@ Riavvia con `docker compose restart` dopo una modifica.
 
 | Dominio | Comportamento |
 | --- | --- |
-| `manuals.playstation.net` | Serve la Guida utente sostituita dal frontend upstream; gestisce `/document/<lingua>/ps5/` e `/app/` |
+| `manuals.playstation.net` | Serve il frontend upstream tramite `/document/<lingua>/ps5/`; i percorsi degli altri file dipendono dalla release |
 | `www.playstation.com` | Reindirizza le richieste web alla radice della Guida locale |
 | `get.net.playstation.net` | Reindirizza le richieste web alla Guida locale; endpoint storico dei test di connessione |
 | `ps5-autoloader.test` | Alias locale che reindirizza alla Guida |
@@ -205,7 +205,12 @@ docker run --rm --entrypoint python \
 
 ## Aggiornamento e provenienza
 
-Per aggiornare, scegli una release stabile in `.env` e ricostruisci. Non viene
+Per aggiornare, scegli una release stabile effettivamente pubblicata in `.env` e ricostruisci.
+Lo script verifica il tag tramite API GitHub e usa il nome dell'artefatto Python
+pubblicato, verificando anche il digest GitHub quando disponibile. Una versione
+inesistente causa un errore esplicito: non viene sostituita automaticamente.
+L'integrazione gestisce le API HTTP delle release 0.5.2 e 0.6.1.
+Non viene
 usato un riferimento mobile `latest`. Il digest effettivo e l'URL scaricato sono
 in `/app/UPSTREAM.txt`; la licenza upstream è in `/app/LICENSE.upstream`.
 Puoi impostare il digest atteso da una fonte verificata in `AUTOLOADER_SHA256`.
@@ -215,8 +220,8 @@ la licenza e gli obblighi relativi al codice sorgente corrispondente.
 
 Fonti consultate il 23 ottobre 2026:
 
-- [Release ufficiale v0.5.2 e artefatti](https://github.com/itsPLK/ps5-webkit-autoloader/releases/tag/v0.5.2).
-- [Host ufficiale della stessa versione](https://github.com/itsPLK/ps5-webkit-autoloader/blob/v0.5.2/pc-host/host.py): gestione Guida e contenuti incorporati.
+- [Release ufficiale v0.6.1 e artefatti](https://github.com/itsPLK/ps5-webkit-autoloader/releases/tag/v0.6.1).
+- [Host ufficiale della stessa versione](https://github.com/itsPLK/ps5-webkit-autoloader/blob/v0.6.1/pc-host/host.py): gestione Guida e contenuti incorporati.
 - [Configurazione Al-Azif](https://github.com/Al-Azif/ps4-exploit-host/blob/master/settings.json): base dei suffissi PlayStation bloccati e ingressi web.
 - [Ricerca sui domini PS5](https://github.com/Yelodress/understanding-ps5-domains): server regionali e telemetria; alcune descrizioni sono dichiarate non verificate dall'autore.
 - [Manuale dnsmasq](https://thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html): zone locali e record statici.

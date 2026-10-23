@@ -7,6 +7,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 from settings import Settings, read_domains, request_action
 
 CONFIG = Path(__file__).resolve().parents[1] / "config"
+if not CONFIG.is_dir():
+    CONFIG = Path("/config")
 
 
 class SettingsTests(unittest.TestCase):

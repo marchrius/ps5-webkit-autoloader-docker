@@ -58,7 +58,7 @@ class Settings:
 
     def dnsmasq_config(self):
         lines = ["port=53", "no-resolv", "no-hosts", "domain-needed", "bogus-priv",
-                 "cache-size=1000", "local-ttl=60", "log-facility=-", "user=root",
+                 "cache-size=1000", "local-ttl=60", "log-facility=-", "user=root", "group=root",
                  "pid-file=/run/dnsmasq.pid"]
         if self.log_queries:
             lines.append("log-queries=extra")

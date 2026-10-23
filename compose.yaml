@@ -3,7 +3,7 @@ services:
     build:
       context: .
       args:
-        AUTOLOADER_VERSION: ${AUTOLOADER_VERSION:-0.5.2}
+        AUTOLOADER_VERSION: ${AUTOLOADER_VERSION:-0.6.1}
         AUTOLOADER_SHA256: ${AUTOLOADER_SHA256:-}
     image: ps5-webkit-autoloader-dns:local
     restart: unless-stopped
@@ -24,7 +24,8 @@ services:
       - /tmp
       - /run
     cap_drop: [ALL]
-    cap_add: [NET_BIND_SERVICE]
+    # dnsmasq initializes its supplementary groups even with user=root/group=root.
+    cap_add: [NET_BIND_SERVICE, SETGID]
     security_opt:
       - no-new-privileges:true
     stop_grace_period: 15s

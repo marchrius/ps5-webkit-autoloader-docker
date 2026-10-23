@@ -10,13 +10,16 @@ import upstream_host as upstream
 from settings import Settings, request_action
 
 
-def main():
-    settings = Settings.load()
+def build_handler(settings):
     archive = upstream.get_embedded_zip()
     if archive is None or not archive.namelist():
         raise RuntimeError("Archivio upstream assente o vuoto")
 
-    class Handler(upstream.DualDirHandler):
+    base_handler = getattr(upstream, "GuideHandler", None) or getattr(upstream, "DualDirHandler", None)
+    if base_handler is None:
+        raise RuntimeError("API host upstream non supportata: manca il gestore HTTP")
+
+    class Handler(base_handler):
         def send_head(self):
             action = request_action(self.headers.get("Host", ""), self.path, settings)
             if action == "deny":
@@ -31,8 +34,24 @@ def main():
                 return None
             return super().send_head()
 
-    handler = functools.partial(Handler, base_dir=None, overrides_dir="/tmp/overrides",
-                                allowed_host=None, embedded_zip=archive)
+    options = {"allowed_host": None}
+    if base_handler is getattr(upstream, "DualDirHandler", None):
+        options.update(base_dir=None, overrides_dir="/tmp/overrides", embedded_zip=archive)
+    return functools.partial(Handler, **options)
+
+
+def configure_server(server):
+    server.daemon_threads = True
+    server.quiet = False
+    if hasattr(upstream, "Status"):
+        server.status = upstream.Status(enabled=False)
+    else:
+        server.guide = upstream.GuideStatus(logger=lambda *args: None)
+
+
+def main():
+    settings = Settings.load()
+    handler = build_handler(settings)
     # Never reuse the public private key embedded in the upstream release.
     subprocess.run([
         "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "3650",
@@ -46,9 +65,7 @@ def main():
     try:
         for port in (80, 443):
             server = ThreadingHTTPServer(("0.0.0.0", port), handler)
-            server.daemon_threads = True
-            server.quiet = False
-            server.guide = upstream.GuideStatus(logger=lambda *args: None)
+            configure_server(server)
             if port == 443:
                 try:
                     server.socket = context.wrap_socket(server.socket, server_side=True)
