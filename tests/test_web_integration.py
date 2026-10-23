@@ -33,10 +33,10 @@ class WebIntegrationTests(unittest.TestCase):
         self.server.server_close()
         self.thread.join(timeout=5)
 
-    def get(self, path, host="manuals.playstation.net"):
+    def get(self, path, host="manuals.playstation.net", method="GET"):
         conn = http.client.HTTPConnection(*self.server.server_address, timeout=3)
         try:
-            conn.request("GET", path, headers={"Host": host})
+            conn.request(method, path, headers={"Host": host})
             response = conn.getresponse()
             return response.status, dict(response.getheaders()), response.read()
         finally:
@@ -47,6 +47,12 @@ class WebIntegrationTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("text/html", headers["Content-Type"])
         self.assertTrue(body)
+
+    def test_healthcheck_head_has_content_length_without_body(self):
+        status, headers, body = self.get("/document/it/ps5/index.html", method="HEAD")
+        self.assertEqual(status, 200)
+        self.assertGreater(int(headers["Content-Length"]), 128)
+        self.assertEqual(body, b"")
 
     def test_embedded_secondary_file_is_served(self):
         archive = self.web.upstream.get_embedded_zip()

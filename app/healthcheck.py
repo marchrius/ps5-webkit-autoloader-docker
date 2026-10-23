@@ -39,10 +39,12 @@ def check():
                                           context=ssl._create_unverified_context()) if secure
                 else http.client.HTTPConnection("127.0.0.1", 80, timeout=2))
         try:
-            conn.request("GET", "/document/it/ps5/index.html",
+            # HEAD exercises the same file resolution without downloading the
+            # large embedded page or closing a GET while the server is writing.
+            conn.request("HEAD", "/document/it/ps5/index.html",
                          headers={"Host": "manuals.playstation.net"})
             response = conn.getresponse()
-            if response.status != 200 or not response.read(128):
+            if response.status != 200 or int(response.getheader("Content-Length", "0")) <= 0:
                 raise RuntimeError("Pagina guida non disponibile")
         finally:
             conn.close()
