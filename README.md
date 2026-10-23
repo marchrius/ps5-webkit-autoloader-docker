@@ -92,6 +92,39 @@ before deciding how to resolve the conflict. Avoid deleting active networks
 or changing the container to an unrelated subnet: its IP must remain reachable
 on the intended LAN.
 
+### Dedicated Docker network on an already-used LAN
+
+If you want a separate Docker network while leaving another service's macvlan
+network unchanged, use `compose.macvlan-dedicated.yaml` with a modern Docker
+Engine that supports multiple macvlan networks on the same parent interface:
+
+```sh
+cp .env.macvlan-dedicated.example .env
+# Set HOST_IP, MACVLAN_PARENT, MACVLAN_SUBNET, and an on-link UPSTREAM_DNS.
+docker compose config
+docker compose up -d --build --force-recreate
+```
+
+In Portainer, select `compose.yaml` and `compose.macvlan-dedicated.yaml`, replacing
+the other macvlan override. This creates a separate stack-owned network with
+the same LAN subnet and a single-address `ip_range` of `HOST_IP/32`. The subnet
+mask remains the LAN mask; `/32` restricts Docker's allocation pool only.
+Choose an unused address outside the DHCP pool.
+
+This variant deliberately omits `gateway`, since Docker has already allocated
+the LAN gateway to the existing network. The container therefore has no default
+route. In selective mode, set `UPSTREAM_DNS` to a resolver within the same LAN
+subnet, such as the router if it provides DNS. Public resolvers and clients on
+other routed subnets are not directly reachable in this mode. `DNS_MODE=offline`
+does not need an upstream resolver. The PS5 keeps its normal router gateway.
+Downloading the release during image build still uses the builder's network.
+
+The two Docker networks have independent lifecycle management, but remain on
+the same physical LAN and are not isolated from each other at layer 2.
+For network isolation or a separate routed subnet, use a configured VLAN and
+appropriate router/firewall rules instead. Older Engines may reject reuse of
+the parent interface; use the external-network variant in that case.
+
 ### Alternative: published ports
 
 This configuration requires Docker with Compose v2 and a stable LAN IPv4
@@ -208,16 +241,16 @@ Settings in `.env`:
 | Variable | Meaning |
 | --- | --- |
 | `HOST_IP` | Required: dedicated container IP with macvlan, or server IP with published ports |
-| `COMPOSE_FILE` | On Linux: `compose.yaml:compose.macvlan.yaml`, or `compose.yaml:compose.macvlan-external.yaml` for an existing network |
+| `COMPOSE_FILE` | On Linux: `compose.yaml` plus the selected macvlan override, separated by `:`; see the three variants above |
 | `MACVLAN_NETWORK` | External macvlan only: exact name of the existing Docker network |
 | `MACVLAN_PARENT` | LAN interface on the Docker host, e.g. `eth0` or `bond0` |
 | `MACVLAN_SUBNET` | LAN subnet in CIDR notation, e.g. `192.168.1.0/24` |
-| `MACVLAN_GATEWAY` | LAN router IPv4 address |
+| `MACVLAN_GATEWAY` | LAN router IPv4 address; used only by the standard managed macvlan variant |
 | `BIND_IP` | Published ports only: bind address, default `0.0.0.0` |
 | `DNS_PORT`, `HTTP_PORT`, `HTTPS_PORT` | Published ports only: defaults 53, 80, and 443; use 1053, 8080, and 8443 for Mac tests |
 | `DNS_MODE=selective` | Blocks configured suffixes and forwards other names upstream |
 | `DNS_MODE=offline` | Blocks all names except local exceptions; no DNS forwarding |
-| `UPSTREAM_DNS` | Comma-separated resolver IPs, default `1.1.1.1,9.9.9.9` |
+| `UPSTREAM_DNS` | Comma-separated resolver IPs, default `1.1.1.1,9.9.9.9`; the dedicated `/32` pool variant requires a resolver on its LAN in selective mode |
 | `LOG_QUERIES=true` | Records DNS queries in Docker logs |
 | `AUTOLOADER_VERSION` | Stable release downloaded during the build |
 | `AUTOLOADER_SHA256` | Optional: expected digest of the release's host `.py` file |
