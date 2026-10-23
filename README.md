@@ -67,6 +67,42 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
+### Collaudo locale da macOS con porte standard occupate
+
+Usa porte alte per evitare conflitti con i servizi del Mac o della VM Colima.
+La configurazione macvlan di `.env` rimane separata:
+
+```sh
+cp .env.macos.example .env.macos
+# Imposta HOST_IP all'IPv4 LAN del Mac.
+docker compose --env-file .env.macos -f compose.yaml up -d --build --force-recreate
+dig @127.0.0.1 -p 1053 manuals.playstation.net A +short +time=2 +tries=1
+dig +tcp @127.0.0.1 -p 1053 manuals.playstation.net A +short +time=2 +tries=1
+curl --fail http://127.0.0.1:8080/document/it/ps5/index.html -o /dev/null
+curl --fail -k --resolve manuals.playstation.net:8443:127.0.0.1 \
+  https://manuals.playstation.net:8443/document/it/ps5/index.html -o /dev/null
+```
+
+Le risposte DNS devono restituire `HOST_IP` e le richieste web devono riuscire.
+Puoi aprire `http://127.0.0.1:8080/` nel browser. Per i test HTTPS usa il percorso
+della Guida indicato sopra: gli ingressi secondari reindirizzano alla porta 443
+standard e non sono adatti alla prova con porte alte. Se loopback funziona ma
+l'IP LAN del Mac no, verifica firewall e inoltro delle porte di Colima.
+Con Colima, `portForwarder: ssh` inoltra solo TCP: in quel caso `dig +tcp`
+funziona mentre `dig` UDP va in timeout. Per collaudare anche UDP puoi usare
+il forwarder `grpc` (indicato come sperimentale da Colima):
+
+```sh
+# Il riavvio interrompe temporaneamente anche gli altri container di Colima.
+colima stop
+colima start --port-forwarder grpc
+```
+
+Poi riavvia il progetto con lo stesso comando Compose e ripeti le query.
+Vedi la [configurazione ufficiale Colima](https://github.com/abiosoft/colima/blob/main/embedded/defaults/colima.yaml).
+La PS5 richiede DNS su porta 53: le porte alternative servono al collaudo da
+PC, mentre sul NAS macvlan il container continua a usare 53/80/443.
+
 ### Configurazione della console
 
 Imposta sulla PS5 il DNS primario a `HOST_IP`. Per il secondario usa lo stesso IP
@@ -137,6 +173,7 @@ In `.env`:
 | `MACVLAN_SUBNET` | Subnet LAN in formato CIDR, es. `192.168.1.0/24` |
 | `MACVLAN_GATEWAY` | IPv4 del router della LAN |
 | `BIND_IP` | Solo con porte pubblicate: indirizzo di bind, default `0.0.0.0` |
+| `DNS_PORT`, `HTTP_PORT`, `HTTPS_PORT` | Solo con porte pubblicate: default 53, 80 e 443; per test Mac 1053, 8080 e 8443 |
 | `DNS_MODE=selective` | Blocca i suffissi configurati, inoltra gli altri nomi agli upstream |
 | `DNS_MODE=offline` | Blocca tutti i nomi tranne le eccezioni locali; nessun inoltro DNS |
 | `UPSTREAM_DNS` | IP dei resolver separati da virgole, default `1.1.1.1,9.9.9.9` |

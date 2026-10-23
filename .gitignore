@@ -1,4 +1,5 @@
 .env
+.env.macos
 __pycache__/
 *.pyc
 .DS_Store
