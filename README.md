@@ -275,6 +275,15 @@ with its license and corresponding source-code obligations.
 
 ### Portainer build failures
 
+The default `image: ps5-webkit-autoloader-dns:local` is a local build tag, not
+a published Docker Hub image. The service uses `pull_policy: build` so Compose
+builds it from the repository and skips it during `compose pull`. Deploy this
+configuration from the Git repository, including the build context and Dockerfile.
+Disable any Portainer option that explicitly forces an image re-pull for this
+stack. Running `docker login` will not make this local tag available in a registry.
+For Docker Swarm deployments, build and publish an image separately before
+deploying; Swarm does not build the image from this Compose definition.
+
 If Portainer reports only `fetch_release.py ... exit code: 1`, check the build
 log immediately before it for `Autoloader download failed`. That line identifies
 the failing step and HTTP status. API HTTP 403 can indicate GitHub's anonymous
