@@ -57,6 +57,41 @@ Macvlan is not supported by Docker Desktop for Mac or Windows; run this
 configuration on the target Linux device. See the
 [Docker macvlan documentation](https://docs.docker.com/engine/network/drivers/macvlan/).
 
+### Reuse an existing macvlan network
+
+If another Docker network already owns the LAN subnet, creating a second one
+can fail with `Pool overlaps with other one on this address space`. Reuse the
+existing network if it is a macvlan network with the correct LAN parent,
+subnet, and gateway. On the target Docker host, inspect it with:
+
+```sh
+docker network ls --filter driver=macvlan
+docker network inspect YOUR_EXISTING_NETWORK
+```
+
+Use the external-network configuration instead of the managed macvlan override:
+
+```sh
+cp .env.macvlan-external.example .env
+# Set MACVLAN_NETWORK to the exact existing Docker network name.
+# Set HOST_IP to an unused address in its subnet, outside the DHCP pool.
+docker compose config
+docker compose up -d --build --force-recreate
+```
+
+In Portainer's Git stack settings, use `compose.yaml` and
+`compose.macvlan-external.yaml` as the Compose files. Replace
+`compose.macvlan.yaml`; do not include both macvlan variants.
+Set `MACVLAN_NETWORK` and `HOST_IP` in the stack environment.
+The external definition contains no driver, parent, or IPAM settings: Docker
+uses the existing network and Compose does not create or remove it.
+
+If the overlapping network is a bridge network rather than macvlan, it is not
+a substitute for direct LAN access. Inspect its subnet and attached containers
+before deciding how to resolve the conflict. Avoid deleting active networks
+or changing the container to an unrelated subnet: its IP must remain reachable
+on the intended LAN.
+
 ### Alternative: published ports
 
 This configuration requires Docker with Compose v2 and a stable LAN IPv4
@@ -173,7 +208,8 @@ Settings in `.env`:
 | Variable | Meaning |
 | --- | --- |
 | `HOST_IP` | Required: dedicated container IP with macvlan, or server IP with published ports |
-| `COMPOSE_FILE` | With macvlan on Linux: `compose.yaml:compose.macvlan.yaml` |
+| `COMPOSE_FILE` | On Linux: `compose.yaml:compose.macvlan.yaml`, or `compose.yaml:compose.macvlan-external.yaml` for an existing network |
+| `MACVLAN_NETWORK` | External macvlan only: exact name of the existing Docker network |
 | `MACVLAN_PARENT` | LAN interface on the Docker host, e.g. `eth0` or `bond0` |
 | `MACVLAN_SUBNET` | LAN subnet in CIDR notation, e.g. `192.168.1.0/24` |
 | `MACVLAN_GATEWAY` | LAN router IPv4 address |
