@@ -255,6 +255,14 @@ Il codice di integrazione non modifica i file frontend/payload della release.
 La distribuzione di immagini con il software upstream GPL-3.0 deve rispettarne
 la licenza e gli obblighi relativi al codice sorgente corrispondente.
 
+## Licenza
+
+Il codice di integrazione di questo repository è distribuito con licenza
+**GNU General Public License v3.0** (`GPL-3.0-only`). Il testo completo è in
+[LICENSE](LICENSE), incluso anche nell'immagine in `/app/LICENSE`.
+Il progetto upstream e i componenti di terze parti mantengono le rispettive
+licenze e attribuzioni; la licenza upstream scaricata è in `/app/LICENSE.upstream`.
+
 Fonti consultate il 23 ottobre 2026:
 
 - [Release ufficiale v0.6.1 e artefatti](https://github.com/itsPLK/ps5-webkit-autoloader/releases/tag/v0.6.1).
