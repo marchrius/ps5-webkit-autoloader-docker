@@ -261,8 +261,9 @@ lower image layers. The Python standard library and HTTPS support are retained.
 ### Release updates
 
 To update, select a published stable release in `.env` and rebuild.
-The script checks the tag through the GitHub API, uses the published Python
-asset's name, and verifies the GitHub digest when available. A nonexistent
+Releases 0.5.2 and 0.6.1 use direct official download URLs and checked-in,
+verified SHA-256 digests, without calling the GitHub API. Other versions use
+the API to discover the published Python asset and its digest when available. A nonexistent
 version produces an explicit error and is not replaced automatically.
 The integration handles the HTTP APIs of releases 0.5.2 and 0.6.1.
 It does not use a moving `latest` reference. The actual digest and download URL
@@ -271,6 +272,22 @@ You can set a digest from a verified source in `AUTOLOADER_SHA256`.
 The integration does not modify the release's frontend or payload files.
 Distributing images containing the GPL-3.0 upstream software requires compliance
 with its license and corresponding source-code obligations.
+
+### Portainer build failures
+
+If Portainer reports only `fetch_release.py ... exit code: 1`, check the build
+log immediately before it for `Autoloader download failed`. That line identifies
+the failing step and HTTP status. API HTTP 403 can indicate GitHub's anonymous
+rate limit; the pinned default release avoids that API call entirely.
+An asset HTTP 404 can indicate a missing release or file, while DNS, connection,
+or certificate errors require checking outbound HTTPS access from the Docker host.
+The build needs access to `github.com`, its release-asset redirect hosts, and
+`raw.githubusercontent.com` for the upstream license. Runtime does not need
+these download endpoints.
+
+For a Portainer stack built from this repository, select the updated commit,
+keep `AUTOLOADER_VERSION=0.6.1`, and rebuild/redeploy. No GitHub token is needed
+for the pinned release.
 
 ## License
 
