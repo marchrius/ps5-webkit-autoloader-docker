@@ -1,0 +1,6 @@
+# DNS suffixes allowed through blocked parent domains in selective mode only.
+# One domain per line, no wildcards; includes the domain and its subdomains.
+# Uses UPSTREAM_DNS, not the local web host. Restart the container after edits.
+# Remove or comment out an entry to restore blocking. Empty/missing file is OK.
+# PS5 Internet connection status check; does not guarantee a successful full test.
+ena.net.playstation.net

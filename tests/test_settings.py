@@ -42,6 +42,34 @@ class SettingsTests(unittest.TestCase):
         self.assertIn("address=/#/\n", conf)
         self.assertNotIn("server=", conf)
 
+    def test_whitelist_forwards_without_turning_into_web_redirect(self):
+        settings = self.load(UPSTREAM_DNS="192.168.1.1")
+        self.assertIn("ena.net.playstation.net", settings.whitelist)
+        conf = settings.dnsmasq_config()
+        self.assertIn("server=192.168.1.1\n", conf)
+        self.assertIn("server=/ena.net.playstation.net/#\n", conf)
+        self.assertIn("local=/playstation.net/\n", conf)
+        self.assertNotIn("ena.net.playstation.net", settings.redirects)
+        self.assertEqual(request_action("ena.net.playstation.net", "/", settings), "deny")
+
+    def test_optional_whitelist_and_invalid_entries(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            for filename in ("blocked-domains.txt", "redirect-domains.txt"):
+                (path / filename).write_text((CONFIG / filename).read_text())
+            env = {"HOST_IP": "192.168.1.10"}
+            self.assertEqual(Settings.load(env, path).whitelist, ())
+            whitelist = path / "whitelist-domains.txt"
+            whitelist.write_text("# no exceptions\n")
+            self.assertEqual(Settings.load(env, path).whitelist, ())
+            whitelist.write_text("ENA.NET.PLAYSTATION.NET. # check\nena.net.playstation.net\n")
+            self.assertEqual(Settings.load(env, path).whitelist, ("ena.net.playstation.net",))
+            for entry in ("*.playstation.net", "ena.net.playstation.net/server=1.1.1.1",
+                          "manuals.playstation.net", "child.manuals.playstation.net"):
+                whitelist.write_text(entry)
+                with self.subTest(entry=entry), self.assertRaises(ValueError):
+                    Settings.load(env, path)
+
     def test_domain_list_normalizes_and_rejects_dnsmasq_directives(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "domains"

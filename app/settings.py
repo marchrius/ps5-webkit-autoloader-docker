@@ -30,6 +30,7 @@ class Settings:
     blocked: tuple
     redirects: tuple
     log_queries: bool = False
+    whitelist: tuple = ()
 
     @classmethod
     def load(cls, env=None, directory=Path("/config")):
@@ -50,11 +51,16 @@ class Settings:
         redirects = read_domains(directory / "redirect-domains.txt")
         if "manuals.playstation.net" not in redirects:
             raise ValueError("Keep manuals.playstation.net in the redirect list")
+        whitelist_path = directory / "whitelist-domains.txt"
+        whitelist = read_domains(whitelist_path) if whitelist_path.exists() else ()
+        for domain in whitelist:
+            if any(domain == redirect or domain.endswith("." + redirect) for redirect in redirects):
+                raise ValueError(f"Whitelist domain overlaps a local redirect zone: {domain}")
         logging = env.get("LOG_QUERIES", "false").lower()
         if logging not in ("true", "false"):
             raise ValueError("LOG_QUERIES must be true or false")
         return cls(str(ip), mode, upstream, read_domains(directory / "blocked-domains.txt"),
-                   redirects, logging == "true")
+                   redirects, logging == "true", whitelist)
 
     def dnsmasq_config(self):
         lines = ["port=53", "no-resolv", "no-hosts", "domain-needed", "bogus-priv",
@@ -67,6 +73,9 @@ class Settings:
         else:
             lines.extend(f"server={ip}" for ip in self.upstream)
         lines.extend(f"local=/{domain}/" for domain in self.blocked)
+        if self.mode == "selective":
+            # More specific forwarding rules override blocked parent suffixes.
+            lines.extend(f"server=/{domain}/#" for domain in self.whitelist)
         for domain in self.redirects:
             # Local-only zone prevents AAAA/HTTPS/SVCB requests escaping to upstream.
             lines.extend((f"local=/{domain}/", f"host-record={domain},{self.host_ip}"))

@@ -236,7 +236,8 @@ Entry domains other than the User's Guide are additional options: the connection
 test may simply fail without opening a browser on the PS5. The installation
 method documented upstream remains the User's Guide. This service does not
 simulate successful PSN access or a successful speed test.
-Update endpoints, `post`, and `ena` remain blocked.
+Update endpoints and `post` remain blocked. `ena.net.playstation.net` is allowed
+through the whitelist for testing Internet connection status.
 
 `blocked-domains.txt` contains the suffixes `playstation.net`, `playstation.com`,
 `playstation.org`, `scea.com`, `sonyentertainmentnetwork.com`, and `sie-rd.com`.
@@ -245,6 +246,38 @@ Blocking covers each domain and its subdomains, including all regional
 and authentication services. Entries in `redirect-domains.txt` create exact
 local A records. AAAA and other DNS query types for those domains are not
 forwarded upstream. This is not a list of individual CDN IP addresses.
+
+### DNS whitelist
+
+Edit `config/whitelist-domains.txt` to allow domains through blocked parent
+suffixes without changing the code. Use one domain per line; blank lines and
+`#` comments are supported. Each entry allows that domain and its subdomains
+through the configured `UPSTREAM_DNS` resolvers in `selective` mode only.
+More specific blocked suffixes still take precedence. `offline` mode ignores
+the whitelist and never forwards DNS queries.
+
+The initial entry is `ena.net.playstation.net`, requested by the PS5 during
+Internet connection checks. This does not guarantee successful PSN, NAT, or
+speed tests. Comment it out to restore blocking. An empty or missing whitelist
+keeps all configured blocks in effect. Local redirect zones cannot be
+whitelisted; remove an optional domain from `redirect-domains.txt` first.
+
+After installing this feature, rebuild/recreate the service once using your
+existing Compose files and environment:
+
+```sh
+docker compose up -d --build --force-recreate
+```
+
+Subsequent whitelist edits need only `docker compose restart`. Reconnect the
+PS5 network before repeating its test. For example:
+
+```sh
+dig @192.168.3.201 ena.net.playstation.net A
+# Expected: public DNS response, not HOST_IP or NXDOMAIN.
+dig @192.168.3.201 fuk01.ps5.update.playstation.net A
+# Expected: NXDOMAIN; firmware updates remain blocked.
+```
 
 Settings in `.env`:
 
