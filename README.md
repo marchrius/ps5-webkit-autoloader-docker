@@ -236,8 +236,9 @@ Entry domains other than the User's Guide are additional options: the connection
 test may simply fail without opening a browser on the PS5. The installation
 method documented upstream remains the User's Guide. This service does not
 simulate successful PSN access or a successful speed test.
-Update endpoints and `post` remain blocked. `ena.net.playstation.net` is allowed
-through the whitelist for testing Internet connection status.
+Firmware update endpoints remain blocked. The whitelist allows `ena` for
+Internet connection status and `post`, `gst.prod.dl.playstation.net`,
+`smetrics.aem.playstation.com`, and `us.np.stun.playstation.net` for experiments.
 
 `blocked-domains.txt` contains the suffixes `playstation.net`, `playstation.com`,
 `playstation.org`, `scea.com`, `sonyentertainmentnetwork.com`, and `sie-rd.com`.
@@ -256,9 +257,13 @@ through the configured `UPSTREAM_DNS` resolvers in `selective` mode only.
 More specific blocked suffixes still take precedence. `offline` mode ignores
 the whitelist and never forwards DNS queries.
 
-The initial entry is `ena.net.playstation.net`, requested by the PS5 during
-Internet connection checks. This does not guarantee successful PSN, NAT, or
-speed tests. Comment it out to restore blocking. An empty or missing whitelist
+Entries include `ena.net.playstation.net` for Internet connection checks,
+`post.net.playstation.net` for upload-test experiments, and
+`us.np.stun.playstation.net` for NAT-test experiments. Also allowed explicitly
+are `gst.prod.dl.playstation.net` (PS5 game patch packages, not firmware) and
+`smetrics.aem.playstation.com` (telemetry, possibly related to trophies).
+These exceptions do not guarantee successful PSN, NAT, or speed tests.
+Comment out an entry to restore blocking. An empty or missing whitelist
 keeps all configured blocks in effect. Local redirect zones cannot be
 whitelisted; remove an optional domain from `redirect-domains.txt` first.
 

@@ -4,3 +4,19 @@
 # Remove or comment out an entry to restore blocking. Empty/missing file is OK.
 # PS5 Internet connection status check; does not guarantee a successful full test.
 ena.net.playstation.net
+
+# Upload network test endpoint (historically documented on PS4).
+# Observed during this PS5's connection test; allow to test upload measurement.
+post.net.playstation.net
+
+# PS5 game patch packages (*.pkg), per understanding-ps5-domains.
+# This is game update content, not console firmware or a confirmed speed-test host.
+gst.prod.dl.playstation.net
+
+# Telemetry endpoint; the study reports a possible link to the trophy system.
+# Allowed explicitly for this experiment despite its telemetry classification.
+smetrics.aem.playstation.com
+
+# STUN endpoint, likely used for NAT discovery during network tests.
+# Listed under NP domains in the study, without a verified function description.
+us.np.stun.playstation.net

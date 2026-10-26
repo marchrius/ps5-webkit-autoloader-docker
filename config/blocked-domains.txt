@@ -60,7 +60,7 @@ hus01.ps5.update.playstation.net
 
 # Telemetry endpoints explicitly listed by the PS5 domain study.
 # Source: https://github.com/Yelodress/understanding-ps5-domains#telemetry
-smetrics.aem.playstation.com
+# smetrics.aem.playstation.com is currently allowed in whitelist-domains.txt.
 telemetry-console.api.playstation.com
 telemetry-web.api.playstation.com
 # Likely serves the telemetry schema; the study marks this role as inferred.
