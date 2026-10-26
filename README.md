@@ -221,67 +221,201 @@ trigger a restart.
 
 ## Managed domains and pages
 
-The lists in `config/` are editable and mounted read-only inside the container.
-Run `docker compose restart` after changing them.
+The active policy is defined by three editable files mounted read-only from
+`config/`. The inventory below matches the configuration validated on a PS5 on
+**October 26, 2026**: **5 whitelist entries, 49 blacklist suffixes, and 4 local
+redirect domains**.
 
-| Domain | Behavior |
+| File | Purpose |
 | --- | --- |
-| `manuals.playstation.net` | Serves the upstream frontend through `/document/<language>/ps5/`; other file paths depend on the release |
-| `www.playstation.com` | Redirects web requests to the local User's Guide root |
-| `get.net.playstation.net` | Redirects web requests to the local User's Guide; a historical connection-test endpoint |
-| `ps5-autoloader.test` | Local alias that redirects to the User's Guide |
-| `HOST_IP` (the container IP with macvlan) | Direct frontend access, useful for HTTP tests |
+| [whitelist-domains.txt](config/whitelist-domains.txt) | Forward selected domains through blocked parent suffixes in `selective` mode |
+| [blocked-domains.txt](config/blocked-domains.txt) | Return NXDOMAIN for configured suffixes, except more specific allowed or local entries |
+| [redirect-domains.txt](config/redirect-domains.txt) | Resolve exact entry domains to `HOST_IP` and serve or redirect their web requests locally |
 
-Entry domains other than the User's Guide are additional options: the connection
-test may simply fail without opening a browser on the PS5. The installation
-method documented upstream remains the User's Guide. This service does not
-simulate successful PSN access or a successful speed test.
-Firmware update endpoints remain blocked. The whitelist allows `ena` for
-Internet connection status and `post`, `gst.prod.dl.playstation.net`,
-`smetrics.aem.playstation.com`, and `us.np.stun.playstation.net` for experiments.
+All files accept one domain per line, blank lines, and `#` comments. Do not use
+wildcards. Blacklist and whitelist entries cover the domain and its subdomains.
+The most specific DNS suffix wins: a whitelist entry overrides a blocked parent,
+while a more specific blacklist entry remains blocked. Avoid putting the same
+suffix in both lists: a local blocking rule prevents forwarding at that suffix.
 
-`blocked-domains.txt` contains the suffixes `playstation.net`, `playstation.com`,
-`playstation.org`, `scea.com`, `sonyentertainmentnetwork.com`, and `sie-rd.com`.
-Blocking covers each domain and its subdomains, including all regional
-`fXX01`, `dXX01`, and `hXX01.ps5.update.playstation.net` servers, CDN, Store,
-and authentication services. Entries in `redirect-domains.txt` create exact
-local A records. AAAA and other DNS query types for those domains are not
-forwarded upstream. This is not a list of individual CDN IP addresses.
+`DNS_MODE=selective` forwards other queries to `UPSTREAM_DNS`.
+`DNS_MODE=offline` ignores whitelist forwarding and blocks other names while
+preserving local entry domains. Neither mode is a firewall.
 
-### DNS whitelist
+### Whitelist: allowed domains
 
-Edit `config/whitelist-domains.txt` to allow domains through blocked parent
-suffixes without changing the code. Use one domain per line; blank lines and
-`#` comments are supported. Each entry allows that domain and its subdomains
-through the configured `UPSTREAM_DNS` resolvers in `selective` mode only.
-More specific blocked suffixes still take precedence. `offline` mode ignores
-the whitelist and never forwards DNS queries.
+| Domain | Documented role and current reason for allowing it |
+| --- | --- |
+| `ena.net.playstation.net` | Internet connection status check, inferred by the domain study from the `SceIcst` User-Agent. Successfully resolved during the PS5 connection test. |
+| `post.net.playstation.net` | Historical PlayStation upload-test endpoint. Successfully resolved during this PS5's test, which completed upload measurement. It is absent from the domain study's README. |
+| `gst.prod.dl.playstation.net` | PS5 game patch PKG downloads according to the study. Successfully resolved during this PS5's test, which completed download measurement. Its speed-test role is an observation to investigate, not a classification supplied by the study. Allowing it also permits game patch content; it is separate from console firmware. |
+| `smetrics.aem.playstation.com` | Telemetry/analytics endpoint; the study mentions a possible trophy-system relationship. Explicitly allowed at the user's request and resolved during the successful test. Its necessity for speed measurement has not been established. |
+| `us.np.stun.playstation.net` | Listed under NP domains without a function description in the study. STUN/NAT discovery is inferred from its name; DNS resolution succeeded during this PS5's test. The supplied result does not establish the NAT-test outcome. |
 
-Entries include `ena.net.playstation.net` for Internet connection checks,
-`post.net.playstation.net` for upload-test experiments, and
-`us.np.stun.playstation.net` for NAT-test experiments. Also allowed explicitly
-are `gst.prod.dl.playstation.net` (PS5 game patch packages, not firmware) and
-`smetrics.aem.playstation.com` (telemetry, possibly related to trophies).
-These exceptions do not guarantee successful PSN, NAT, or speed tests.
-Comment out an entry to restore blocking. An empty or missing whitelist
-keeps all configured blocks in effect. Local redirect zones cannot be
-whitelisted; remove an optional domain from `redirect-domains.txt` first.
+The whitelist uses the configured upstream resolver, not the local web host.
+Comment out an entry to restore its parent block. An empty or missing whitelist
+keeps configured blocks in effect. A whitelist entry equal to or below a local
+redirect zone is rejected at startup; remove an optional redirect first if you
+want to forward that domain. Keep `manuals.playstation.net` in the redirect list.
 
-After installing this feature, rebuild/recreate the service once using your
-existing Compose files and environment:
+**Telemetry exception:** the current policy allows `smetrics.aem.playstation.com`.
+It therefore blocks the telemetry endpoints listed below, but does not block all
+telemetry. The successful batch test does not prove that every whitelist entry
+is required; testing one removed exception at a time would establish that.
+
+### Blacklist: blocked domains
+
+The blacklist contains 6 broad suffixes, 1 firmware parent suffix, 39 explicit
+regional firmware hosts, and 3 telemetry suffixes (49 entries total).
+
+| Broad suffix | Coverage |
+| --- | --- |
+| `playstation.net` | PlayStation services, including PSN, update/CDN and RNPS hosts, subject to the explicit exceptions |
+| `playstation.com` | PlayStation website/API and telemetry hosts, subject to the explicit exceptions |
+| `playstation.org` | Domain and all subdomains |
+| `scea.com` | Domain and all subdomains |
+| `sonyentertainmentnetwork.com` | Domain and all subdomains |
+| `sie-rd.com` | Domain and all subdomains |
+
+**Console firmware:** `ps5.update.playstation.net` blocks the whole firmware
+namespace, including regional hosts beyond the explicit list. The explicit
+regional entries preserve their blocks if a broader parent is later allowed.
+The domain study identifies three host families:
+
+| Host family | Purpose |
+| --- | --- |
+| `fXX01.ps5.update.playstation.net` | Firmware version checks: XML manifests, PUP URLs, and minimum firmware required per game |
+| `dXX01.ps5.update.playstation.net` | Firmware PUP downloads |
+| `hXX01.ps5.update.playstation.net` | Update information / “About this update” pages |
+
+All 39 explicit hosts are listed below. Append `.ps5.update.playstation.net`
+to each host label; `XX` above is explanatory notation, not configuration syntax.
+
+| Region code | Version check | Firmware download | Update information |
+| --- | --- | --- | --- |
+| `au` | `fau01` | `dau01` | `hau01` |
+| `br` | `fbr01` | `dbr01` | `hbr01` |
+| `cn` | `fcn01` | `dcn01` | `hcn01` |
+| `eu` | `feu01` | `deu01` | `heu01` |
+| `hk` | `fhk01` | `dhk01` | `hhk01` |
+| `jp` | `fjp01` | `djp01` | `hjp01` |
+| `kr` | `fkr01` | `dkr01` | `hkr01` |
+| `mx` | `fmx01` | `dmx01` | `hmx01` |
+| `ru` | `fru01` | `dru01` | `hru01` |
+| `sa` | `fsa01` | `dsa01` | `hsa01` |
+| `tw` | `ftw01` | `dtw01` | `htw01` |
+| `uk` | `fuk01` | `duk01` | `huk01` |
+| `us` | `fus01` | `dus01` | `hus01` |
+
+**Explicit telemetry blocks:**
+
+| Domain | Role described by the study |
+| --- | --- |
+| `telemetry-console.api.playstation.com` | Probably synchronizes playtime and games played; detailed purpose inferred |
+| `telemetry-web.api.playstation.com` | Possibly tracks browser usage; detailed purpose inferred |
+| `telemetry-schema-app.rnps.dl.playstation.net` | Likely downloads the telemetry schema at boot; role inferred |
+
+Other hosts observed returning NXDOMAIN through the broad parent blocks include
+`ps5.np.playstation.net`, `envelope2.np.dl.playstation.net`,
+`ppr-crl.rnps.dl.playstation.net`, `qgve.dl.playstation.net`,
+`feature.api.playstation.com`, and
+`feature-discovery-assets-amd.dl.playstation.net`. They are not extra explicit
+blacklist entries. The study does not assign a verified role to all of them;
+RNPS feature updates are distinct from console firmware updates.
+
+### Redirects: local entry domains
+
+Each configured domain gets an exact local A record pointing to `HOST_IP`.
+Its DNS zone stays local: AAAA, HTTPS/SVCB, and queries below that zone are not
+forwarded upstream. Subdomains do not automatically receive the exact host's
+A record. Web behavior is separate from DNS resolution:
+
+| Domain | Local web behavior |
+| --- | --- |
+| `manuals.playstation.net` | Serves the official upstream frontend at `/document/<language>/ps5/index.html`; other assets depend on the upstream release |
+| `www.playstation.com` | Redirects to the local User's Guide origin |
+| `get.net.playstation.net` | Redirects to the local User's Guide origin; a historical connection-test endpoint, currently kept local |
+| `ps5-autoloader.test` | Local browser-testing alias that redirects to the User's Guide origin |
+
+Direct HTTP access through `HOST_IP` also serves the frontend. Extra entry
+domains do not guarantee that the PS5 connection test opens a browser. Use
+**Settings → User's Guide** for the documented installation flow.
+
+### PS5 validation: October 26, 2026
+
+The user confirmed successful **download and upload speed measurements** with
+all five whitelist exceptions active. The tested setup used:
+
+| Setting | Tested value |
+| --- | --- |
+| PS5 | `192.168.3.64`, automatic IP configuration, manual DNS pointing to the container |
+| DNS / web container (`HOST_IP`) | `192.168.3.201` |
+| Mode | `selective` |
+| Upstream LAN DNS | `192.168.3.254` |
+
+The logs show successful public DNS responses for `ena`, `post`, `gst`,
+`smetrics`, and `us.np.stun`; `fuk01.ps5.update.playstation.net`,
+`ps5.np.playstation.net`, and `telemetry-console.api.playstation.com` still
+returned NXDOMAIN. `manuals.playstation.net` resolved to `192.168.3.201`, and
+local HTTP healthcheck requests returned 200.
+
+`get.net.playstation.net` remained redirected and was not queried in the supplied
+successful test. The logs show DNS resolution, not HTTP transfers or their
+contents; the speed-test success comes from the user's console result. These
+results do not establish successful PSN access, a NAT type, the necessity of
+each exception, or the behavior of other firmware/network configurations.
+Repeated queries for blocked hosts show repeated console requests; the
+`config ... is NXDOMAIN` replies confirm the block remains active.
+
+In this dedicated macvlan setup the container has no default route, so its
+upstream DNS must be reachable within the LAN subnet. `192.168.3.254` answered
+the supplied DNS probes; `192.168.3.1` timed out. Keep the PS5's normal router
+gateway and point its DNS to the container, rather than to the upstream resolver.
+
+Domain classifications come from the supplied
+[Yelodress domain study](https://github.com/Yelodress/understanding-ps5-domains),
+which studied firmware 14.00 without PSN access and marks several roles as
+inferred. The study does not list `get` or `post`, or identify a dedicated
+speed-test host. Historical network-test grouping is also documented in
+[Al-Azif's configuration notes](https://gist.github.com/Al-Azif/296c7a4319c2fe3b597d96206213cdb6).
+The observations above describe this deployment and do not change those source
+classifications.
+
+### Apply changes and inspect the policy
+
+After editing any of the three domain files:
 
 ```sh
-docker compose up -d --build --force-recreate
+docker compose restart
 ```
 
-Subsequent whitelist edits need only `docker compose restart`. Reconnect the
-PS5 network before repeating its test. For example:
+Reconnect the PS5 network before repeating its test. Code/image changes require
+`docker compose up -d --build --force-recreate`; environment changes require
+container recreation. Use the same Compose files and environment as the existing
+deployment.
+
+With `LOG_QUERIES=true`, inspect the generated policy and live replies:
 
 ```sh
-dig @192.168.3.201 ena.net.playstation.net A
-# Expected: public DNS response, not HOST_IP or NXDOMAIN.
+docker compose exec dns cat /run/dnsmasq.conf
+docker compose logs --follow --tail 0 --timestamps dns
+```
+
+For the tested deployment, run these probes from another LAN device:
+
+```sh
+# Expected: upstream DNS answers (CNAME chains and public addresses may change).
+for domain in ena.net.playstation.net post.net.playstation.net \
+  gst.prod.dl.playstation.net smetrics.aem.playstation.com \
+  us.np.stun.playstation.net; do
+  dig @192.168.3.201 "$domain" A +time=2 +tries=1
+done
+# Expected: NXDOMAIN.
 dig @192.168.3.201 fuk01.ps5.update.playstation.net A
-# Expected: NXDOMAIN; firmware updates remain blocked.
+dig @192.168.3.201 telemetry-console.api.playstation.com A
+# Expected: 192.168.3.201 for A; no upstream forwarding for AAAA.
+dig @192.168.3.201 manuals.playstation.net A
+dig @192.168.3.201 manuals.playstation.net AAAA
 ```
 
 Settings in `.env`:
