@@ -14,6 +14,7 @@ from pathlib import Path
 PINNED_RELEASES = {
     "0.5.2": "6421f167d01ff1c0f3c8c2df1bf0e656691837b938aa924b3d2426c05ec2b7bf",
     "0.6.1": "722798faaf82d733e00a7ad2658d21323ec22b70755c74018ed5e6ca164fd2c0",
+    "0.6.2": "d343b0c8fdb4f3485f7704b05468f53d26559ae6bce8d6877ad656288681087c",
 }
 REPOSITORY = "https://github.com/itsPLK/ps5-webkit-autoloader"
 
@@ -58,7 +59,7 @@ def download(url, description, timeout):
 
 def main(version, expected_hash, output_dir=Path("/app")):
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
-        raise ValueError("AUTOLOADER_VERSION must be a stable release, e.g. 0.6.1")
+        raise ValueError("AUTOLOADER_VERSION must be a stable release, e.g. 0.6.2")
     if expected_hash and not re.fullmatch(r"[0-9a-fA-F]{64}", expected_hash):
         raise ValueError("Invalid AUTOLOADER_SHA256")
     asset = release_asset(version)

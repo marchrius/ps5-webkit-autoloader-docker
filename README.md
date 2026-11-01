@@ -3,7 +3,7 @@
 An always-on container providing UDP/TCP DNS, HTTP, and HTTPS. It blocks PSN,
 PlayStation updates, and telemetry, and serves the official installer from
 [itsPLK/ps5-webkit-autoloader](https://github.com/itsPLK/ps5-webkit-autoloader).
-The build downloads release **v0.6.1**, including its embedded frontend and payloads.
+The build downloads release **v0.6.2**, including its embedded frontend and payloads.
 Copying the repository's frontend directory alone is insufficient because it
 requires generated artifacts. The container does not download updates at startup
 and can run without Internet access after the image has been built.
@@ -511,12 +511,28 @@ lower image layers. The Python standard library and HTTPS support are retained.
 
 ### Release updates
 
+The default is v0.6.2 (October 28, 2026). It bundles Unified Autoloader v0.1.6
+with Payload Manager v0.6.3, elfldr v0.27, and WebKit Remote Loader v0.1.2,
+including Relapse support for firmware 11.40. The existing HTTP adapter serves
+the new host's embedded frontend and payloads without changes.
+
+When upgrading an existing deployment, also update `AUTOLOADER_VERSION=0.6.2`
+in its `.env` or Portainer environment: an explicit value overrides the new
+Compose default. If `AUTOLOADER_SHA256` is set, replace the old digest with
+`d343b0c8fdb4f3485f7704b05468f53d26559ae6bce8d6877ad656288681087c`
+or leave it empty to use the checked-in verified digest. Rebuild and recreate
+with the same Compose files used by the deployment:
+
+```sh
+docker compose up -d --build --force-recreate
+```
+
 To update, select a published stable release in `.env` and rebuild.
-Releases 0.5.2 and 0.6.1 use direct official download URLs and checked-in,
+Releases 0.5.2, 0.6.1, and 0.6.2 use direct official download URLs and checked-in,
 verified SHA-256 digests, without calling the GitHub API. Other versions use
 the API to discover the published Python asset and its digest when available. A nonexistent
 version produces an explicit error and is not replaced automatically.
-The integration handles the HTTP APIs of releases 0.5.2 and 0.6.1.
+The integration handles the HTTP APIs of releases 0.5.2, 0.6.1, and 0.6.2.
 It does not use a moving `latest` reference. The actual digest and download URL
 are recorded in `/app/UPSTREAM.txt`; the upstream license is in `/app/LICENSE.upstream`.
 You can set a digest from a verified source in `AUTOLOADER_SHA256`.
@@ -546,7 +562,7 @@ The build needs access to `github.com`, its release-asset redirect hosts, and
 these download endpoints.
 
 For a Portainer stack built from this repository, select the updated commit,
-keep `AUTOLOADER_VERSION=0.6.1`, and rebuild/redeploy. No GitHub token is needed
+set `AUTOLOADER_VERSION=0.6.2`, and rebuild/redeploy. No GitHub token is needed
 for the pinned release.
 
 ## License
@@ -558,10 +574,10 @@ The upstream project and third-party components retain their respective
 licenses and attribution notices. The downloaded upstream license is at
 `/app/LICENSE.upstream`.
 
-Sources consulted on October 23, 2026:
+Sources consulted on October 23 and November 1, 2026:
 
-- [Official v0.6.1 release and assets](https://github.com/itsPLK/ps5-webkit-autoloader/releases/tag/v0.6.1).
-- [Official host for the same version](https://github.com/itsPLK/ps5-webkit-autoloader/blob/v0.6.1/pc-host/host.py): User's Guide handling and embedded content.
+- [Official v0.6.2 release and assets](https://github.com/itsPLK/ps5-webkit-autoloader/releases/tag/v0.6.2).
+- [Official host for the same version](https://github.com/itsPLK/ps5-webkit-autoloader/releases/download/v0.6.2/webkit-autoloader-host_v0.6.2.py): User's Guide handling and embedded content.
 - [Al-Azif configuration](https://github.com/Al-Azif/ps4-exploit-host/blob/master/settings.json): PlayStation blocking suffixes and web entry domains.
 - [PS5 domain research](https://github.com/Yelodress/understanding-ps5-domains): regional servers and telemetry; the author marks some descriptions as unverified.
 - [dnsmasq manual](https://thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html): local zones and static records.

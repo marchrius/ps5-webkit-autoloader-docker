@@ -33,8 +33,8 @@ class ReleaseTests(unittest.TestCase):
     @patch("fetch_release.urllib.request.urlopen")
     def test_missing_release_explains_env_fix(self, urlopen):
         urlopen.side_effect = urllib.error.HTTPError("url", 404, "Not found", {}, None)
-        with self.assertRaisesRegex(ValueError, "v0.6.2 is not published.*AUTOLOADER_VERSION"):
-            release_asset("0.6.2")
+        with self.assertRaisesRegex(ValueError, "v9.9.9 is not published.*AUTOLOADER_VERSION"):
+            release_asset("9.9.9")
 
     @patch("fetch_release.urllib.request.urlopen")
     def test_executable_only_release_fails(self, urlopen):
@@ -56,8 +56,8 @@ class ReleaseTests(unittest.TestCase):
         source = b'EMBEDDED_ZIP_B64 = "test-archive"\n'
         digest = hashlib.sha256(source).hexdigest()
         urlopen.side_effect = [io.BytesIO(source), io.BytesIO(b"license text")]
-        with patch.dict(PINNED_RELEASES, {"0.6.1": digest}), tempfile.TemporaryDirectory() as directory:
-            main("0.6.1", "", Path(directory))
+        with patch.dict(PINNED_RELEASES, {"0.6.2": digest}), tempfile.TemporaryDirectory() as directory:
+            main("0.6.2", "", Path(directory))
             self.assertEqual((Path(directory) / "upstream_host.py").read_bytes(), source)
             self.assertEqual((Path(directory) / "LICENSE.upstream").read_bytes(), b"license text")
         self.assertEqual(urlopen.call_count, 2)
@@ -69,7 +69,7 @@ class ReleaseTests(unittest.TestCase):
         urlopen.return_value = io.BytesIO(b'EMBEDDED_ZIP_B64 = "tampered"\n')
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "verified release digest"):
-                main("0.6.1", "", Path(directory))
+                main("0.6.2", "", Path(directory))
             self.assertFalse((Path(directory) / "upstream_host.py").exists())
 
     @patch("fetch_release.urllib.request.urlopen")
@@ -77,7 +77,7 @@ class ReleaseTests(unittest.TestCase):
         urlopen.side_effect = urllib.error.HTTPError("url", 403, "Forbidden", {}, None)
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "Release asset download failed: HTTP 403"):
-                main("0.6.1", "", Path(directory))
+                main("0.6.2", "", Path(directory))
 
     @patch("fetch_release.urllib.request.urlopen")
     def test_license_http_failure_identifies_download_stage(self, urlopen):
@@ -85,9 +85,9 @@ class ReleaseTests(unittest.TestCase):
         digest = hashlib.sha256(source).hexdigest()
         urlopen.side_effect = [io.BytesIO(source),
                               urllib.error.HTTPError("url", 404, "Not found", {}, None)]
-        with patch.dict(PINNED_RELEASES, {"0.6.1": digest}), tempfile.TemporaryDirectory() as directory:
+        with patch.dict(PINNED_RELEASES, {"0.6.2": digest}), tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "Upstream license download failed: HTTP 404"):
-                main("0.6.1", "", Path(directory))
+                main("0.6.2", "", Path(directory))
 
 
 if __name__ == "__main__":
