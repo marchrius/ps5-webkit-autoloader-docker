@@ -523,6 +523,20 @@ version use `0.7.0-dev-3a34c3b`. The downloader pins that exact official asset
 and its published SHA-256. The existing HTTP adapter serves its embedded
 frontend and payloads without changes.
 
+At each container startup, the logs print the version requested through
+`AUTOLOADER_VERSION` and the actual `VERSION` read from `/app/upstream_host.py`:
+
+```text
+Autoloader requested (AUTOLOADER_VERSION): 0.7.0-prerelease-2
+Autoloader installed (/app/upstream_host.py): 0.7.0-dev-3a34c3b
+```
+
+Compose passes the selected version to both the build and runtime environment.
+For direct `docker run`, the environment defaults to the version used to build
+the image. Changing only the runtime ENV changes the requested-version log;
+rebuild the image to install another version. The pre-release tag and build
+version shown above identify the same official release.
+
 When upgrading an existing deployment, also update `AUTOLOADER_VERSION=0.7.0-prerelease-2`
 in its `.env` or Portainer environment: an explicit value overrides the new
 Compose default. If `AUTOLOADER_SHA256` is set, replace the old digest with

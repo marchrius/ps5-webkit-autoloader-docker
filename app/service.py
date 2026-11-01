@@ -1,4 +1,5 @@
 """Exit on child failure so Docker restarts DNS and web as one service."""
+import os
 import signal
 import subprocess
 import sys
@@ -11,6 +12,11 @@ from settings import Settings
 
 
 def main():
+    import upstream_host
+
+    print(f"Autoloader requested (AUTOLOADER_VERSION): "
+          f"{os.environ.get('AUTOLOADER_VERSION') or 'not set'}", flush=True)
+    print(f"Autoloader installed (/app/upstream_host.py): {upstream_host.VERSION}", flush=True)
     settings = Settings.load()
     conf = Path("/run/dnsmasq.conf")
     conf.write_text(settings.dnsmasq_config())

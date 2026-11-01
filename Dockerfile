@@ -1,4 +1,5 @@
 # Keep the Python build and final runtime on the same Alpine release/ABI.
+ARG AUTOLOADER_VERSION=0.7.0-prerelease-2
 FROM python:3.13-alpine3.24 AS python-runtime
 
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
@@ -14,7 +15,7 @@ RUN apk info --depends .python-rundeps | sed '1d; /^$/d' > /python-rundeps.txt \
 
 FROM python-runtime AS upstream-download
 
-ARG AUTOLOADER_VERSION=0.7.0-prerelease-2
+ARG AUTOLOADER_VERSION
 ARG AUTOLOADER_SHA256=""
 WORKDIR /app
 COPY app/fetch_release.py /tmp/fetch_release.py
@@ -22,12 +23,14 @@ RUN python /tmp/fetch_release.py "${AUTOLOADER_VERSION}" "${AUTOLOADER_SHA256}"
 
 FROM alpine:3.24 AS runtime
 
+ARG AUTOLOADER_VERSION
 LABEL org.opencontainers.image.title="PS5 WebKit Autoloader DNS host" \
       org.opencontainers.image.description="Local PSN DNS blocking and official WebKit installer hosting" \
       org.opencontainers.image.licenses="GPL-3.0-only"
 
 ENV PATH=/usr/local/bin:$PATH \
-    PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+    PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
+    AUTOLOADER_VERSION=${AUTOLOADER_VERSION}
 COPY --from=python-runtime /usr/local/ /usr/local/
 COPY --from=python-runtime /python-rundeps.txt /tmp/python-rundeps.txt
 # Resolve the official Python image's native dependencies for this architecture.
