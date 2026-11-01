@@ -3,7 +3,7 @@ services:
     build:
       context: .
       args:
-        AUTOLOADER_VERSION: ${AUTOLOADER_VERSION:-0.6.2}
+        AUTOLOADER_VERSION: ${AUTOLOADER_VERSION:-0.7.0-prerelease-2}
         AUTOLOADER_SHA256: ${AUTOLOADER_SHA256:-}
     image: ps5-webkit-autoloader-dns:local
     # This tag is built from source, not downloaded from a container registry.

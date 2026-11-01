@@ -15,13 +15,18 @@ PINNED_RELEASES = {
     "0.5.2": "6421f167d01ff1c0f3c8c2df1bf0e656691837b938aa924b3d2426c05ec2b7bf",
     "0.6.1": "722798faaf82d733e00a7ad2658d21323ec22b70755c74018ed5e6ca164fd2c0",
     "0.6.2": "d343b0c8fdb4f3485f7704b05468f53d26559ae6bce8d6877ad656288681087c",
+    "0.7.0-prerelease-2": "3817965cb6d092598bad064cb89176f18d3b1b309c5d31acfef04b2f8247db74",
+}
+# Upstream pre-release asset filenames can use a build ID instead of the tag.
+PINNED_ASSET_NAMES = {
+    "0.7.0-prerelease-2": "webkit-autoloader-host_v0.7.0-dev-3a34c3b.py",
 }
 REPOSITORY = "https://github.com/itsPLK/ps5-webkit-autoloader"
 
 
 def release_asset(version):
     if version in PINNED_RELEASES:
-        name = f"webkit-autoloader-host_v{version}.py"
+        name = PINNED_ASSET_NAMES.get(version, f"webkit-autoloader-host_v{version}.py")
         return {"name": name, "digest": f"sha256:{PINNED_RELEASES[version]}",
                 "browser_download_url": f"{REPOSITORY}/releases/download/v{version}/{name}"}
     api = f"https://api.github.com/repos/itsPLK/ps5-webkit-autoloader/releases/tags/v{version}"
@@ -58,8 +63,10 @@ def download(url, description, timeout):
 
 
 def main(version, expected_hash, output_dir=Path("/app")):
-    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
-        raise ValueError("AUTOLOADER_VERSION must be a stable release, e.g. 0.6.2")
+    if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?", version):
+        raise ValueError(
+            "AUTOLOADER_VERSION must be a release version, e.g. 0.6.2 or 0.7.0-prerelease-2"
+        )
     if expected_hash and not re.fullmatch(r"[0-9a-fA-F]{64}", expected_hash):
         raise ValueError("Invalid AUTOLOADER_SHA256")
     asset = release_asset(version)

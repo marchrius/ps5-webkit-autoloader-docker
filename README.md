@@ -3,7 +3,7 @@
 An always-on container providing UDP/TCP DNS, HTTP, and HTTPS. It blocks PSN,
 PlayStation updates, and telemetry, and serves the official installer from
 [itsPLK/ps5-webkit-autoloader](https://github.com/itsPLK/ps5-webkit-autoloader).
-The build downloads release **v0.6.2**, including its embedded frontend and payloads.
+The build downloads **v0.7.0-prerelease-2** (a pre-release/test build), including its embedded frontend and payloads.
 Copying the repository's frontend directory alone is insufficient because it
 requires generated artifacts. The container does not download updates at startup
 and can run without Internet access after the image has been built.
@@ -434,7 +434,7 @@ Settings in `.env`:
 | `DNS_MODE=offline` | Blocks all names except local exceptions; no DNS forwarding |
 | `UPSTREAM_DNS` | Comma-separated resolver IPs, default `1.1.1.1,9.9.9.9`; the dedicated `/32` pool variant requires a resolver on its LAN in selective mode |
 | `LOG_QUERIES=true` | Records DNS queries in Docker logs |
-| `AUTOLOADER_VERSION` | Stable release downloaded during the build |
+| `AUTOLOADER_VERSION` | Explicit release or pre-release version downloaded during the build |
 | `AUTOLOADER_SHA256` | Optional: expected digest of the release's host `.py` file |
 
 To apply `.env` changes, run `docker compose up -d --build`.
@@ -511,15 +511,22 @@ lower image layers. The Python standard library and HTTPS support are retained.
 
 ### Release updates
 
-The default is v0.6.2 (October 28, 2026). It bundles Unified Autoloader v0.1.6
-with Payload Manager v0.6.3, elfldr v0.27, and WebKit Remote Loader v0.1.2,
-including Relapse support for firmware 11.40. The existing HTTP adapter serves
-the new host's embedded frontend and payloads without changes.
+The default is **v0.7.0-prerelease-2** (October 31, 2026), an upstream test
+build with internal changes focused on Relapse. Upstream describes automatic
+exploit selection by firmware and network status: Relapse above firmware 12.00
+through 13.60, Poops on 9.05, and otherwise Relapse with an active network
+connection or Poops offline on supported firmware up to 12.00. Console behavior
+still requires testing on the actual PS5.
 
-When upgrading an existing deployment, also update `AUTOLOADER_VERSION=0.6.2`
+The release tag is `v0.7.0-prerelease-2`, but its Python asset and embedded
+version use `0.7.0-dev-3a34c3b`. The downloader pins that exact official asset
+and its published SHA-256. The existing HTTP adapter serves its embedded
+frontend and payloads without changes.
+
+When upgrading an existing deployment, also update `AUTOLOADER_VERSION=0.7.0-prerelease-2`
 in its `.env` or Portainer environment: an explicit value overrides the new
 Compose default. If `AUTOLOADER_SHA256` is set, replace the old digest with
-`d343b0c8fdb4f3485f7704b05468f53d26559ae6bce8d6877ad656288681087c`
+`3817965cb6d092598bad064cb89176f18d3b1b309c5d31acfef04b2f8247db74`
 or leave it empty to use the checked-in verified digest. Rebuild and recreate
 with the same Compose files used by the deployment:
 
@@ -527,18 +534,23 @@ with the same Compose files used by the deployment:
 docker compose up -d --build --force-recreate
 ```
 
-To update, select a published stable release in `.env` and rebuild.
-Releases 0.5.2, 0.6.1, and 0.6.2 use direct official download URLs and checked-in,
+To update, select an explicit published release or pre-release in `.env` and rebuild.
+Releases 0.5.2, 0.6.1, 0.6.2, and 0.7.0-prerelease-2 use direct official
+download URLs and checked-in,
 verified SHA-256 digests, without calling the GitHub API. Other versions use
 the API to discover the published Python asset and its digest when available. A nonexistent
 version produces an explicit error and is not replaced automatically.
-The integration handles the HTTP APIs of releases 0.5.2, 0.6.1, and 0.6.2.
+The integration handles the HTTP APIs of releases 0.5.2, 0.6.1, 0.6.2,
+and 0.7.0-prerelease-2.
 It does not use a moving `latest` reference. The actual digest and download URL
 are recorded in `/app/UPSTREAM.txt`; the upstream license is in `/app/LICENSE.upstream`.
 You can set a digest from a verified source in `AUTOLOADER_SHA256`.
 The integration does not modify the release's frontend or payload files.
 Distributing images containing the GPL-3.0 upstream software requires compliance
 with its license and corresponding source-code obligations.
+
+To return to the stable release, set `AUTOLOADER_VERSION=0.6.2`, clear any
+pre-release-specific `AUTOLOADER_SHA256`, and rebuild/recreate the container.
 
 ### Portainer build failures
 
@@ -562,7 +574,7 @@ The build needs access to `github.com`, its release-asset redirect hosts, and
 these download endpoints.
 
 For a Portainer stack built from this repository, select the updated commit,
-set `AUTOLOADER_VERSION=0.6.2`, and rebuild/redeploy. No GitHub token is needed
+set `AUTOLOADER_VERSION=0.7.0-prerelease-2`, and rebuild/redeploy. No GitHub token is needed
 for the pinned release.
 
 ## License
@@ -576,8 +588,8 @@ licenses and attribution notices. The downloaded upstream license is at
 
 Sources consulted on October 23 and November 1, 2026:
 
-- [Official v0.6.2 release and assets](https://github.com/itsPLK/ps5-webkit-autoloader/releases/tag/v0.6.2).
-- [Official host for the same version](https://github.com/itsPLK/ps5-webkit-autoloader/releases/download/v0.6.2/webkit-autoloader-host_v0.6.2.py): User's Guide handling and embedded content.
+- [Official v0.7.0 pre-release 2 and assets](https://github.com/itsPLK/ps5-webkit-autoloader/releases/tag/v0.7.0-prerelease-2).
+- [Official host for the same version](https://github.com/itsPLK/ps5-webkit-autoloader/releases/download/v0.7.0-prerelease-2/webkit-autoloader-host_v0.7.0-dev-3a34c3b.py): User's Guide handling and embedded content.
 - [Al-Azif configuration](https://github.com/Al-Azif/ps4-exploit-host/blob/master/settings.json): PlayStation blocking suffixes and web entry domains.
 - [PS5 domain research](https://github.com/Yelodress/understanding-ps5-domains): regional servers and telemetry; the author marks some descriptions as unverified.
 - [dnsmasq manual](https://thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html): local zones and static records.

@@ -18,8 +18,38 @@ class ReleaseTests(unittest.TestCase):
         for version, digest in PINNED_RELEASES.items():
             asset = release_asset(version)
             self.assertEqual(asset["digest"], f"sha256:{digest}")
+            expected_name = ("webkit-autoloader-host_v0.7.0-dev-3a34c3b.py"
+                             if version == "0.7.0-prerelease-2"
+                             else f"webkit-autoloader-host_v{version}.py")
+            self.assertEqual(asset["name"], expected_name)
             self.assertTrue(asset["browser_download_url"].endswith(
-                f"/v{version}/webkit-autoloader-host_v{version}.py"))
+                f"/v{version}/{expected_name}"))
+        urlopen.assert_not_called()
+
+    @patch("fetch_release.urllib.request.urlopen")
+    def test_prerelease_uses_build_asset_and_tag_license_without_api(self, urlopen):
+        version = "0.7.0-prerelease-2"
+        source = b'EMBEDDED_ZIP_B64 = "test-archive"\n'
+        digest = hashlib.sha256(source).hexdigest()
+        urlopen.side_effect = [io.BytesIO(source), io.BytesIO(b"license text")]
+        with patch.dict(PINNED_RELEASES, {version: digest}), tempfile.TemporaryDirectory() as directory:
+            main(version, "", Path(directory))
+            self.assertEqual((Path(directory) / "upstream_host.py").read_bytes(), source)
+            self.assertIn(f"sha256={digest}", (Path(directory) / "UPSTREAM.txt").read_text())
+        self.assertEqual(urlopen.call_count, 2)
+        self.assertEqual(urlopen.call_args_list[0].args[0].full_url,
+                         "https://github.com/itsPLK/ps5-webkit-autoloader/releases/download/"
+                         "v0.7.0-prerelease-2/webkit-autoloader-host_v0.7.0-dev-3a34c3b.py")
+        self.assertEqual(urlopen.call_args_list[1].args[0].full_url,
+                         "https://raw.githubusercontent.com/itsPLK/ps5-webkit-autoloader/"
+                         "v0.7.0-prerelease-2/LICENSE")
+
+    @patch("fetch_release.urllib.request.urlopen")
+    def test_invalid_version_is_rejected_before_download(self, urlopen):
+        for version in ("latest", "v0.7.0-prerelease-2", "0.7.0-", "0.7.0-pre/2",
+                        "0.7.0-pre..2", "0.7.0\n", "../0.7.0"):
+            with self.subTest(version=version), self.assertRaisesRegex(ValueError, "AUTOLOADER_VERSION"):
+                main(version, "")
         urlopen.assert_not_called()
 
     @patch("fetch_release.urllib.request.urlopen")

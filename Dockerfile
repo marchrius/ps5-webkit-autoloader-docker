@@ -14,7 +14,7 @@ RUN apk info --depends .python-rundeps | sed '1d; /^$/d' > /python-rundeps.txt \
 
 FROM python-runtime AS upstream-download
 
-ARG AUTOLOADER_VERSION=0.6.2
+ARG AUTOLOADER_VERSION=0.7.0-prerelease-2
 ARG AUTOLOADER_SHA256=""
 WORKDIR /app
 COPY app/fetch_release.py /tmp/fetch_release.py
