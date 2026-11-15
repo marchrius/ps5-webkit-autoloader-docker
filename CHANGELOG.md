@@ -8,6 +8,16 @@ changes. Move entries into a dated release section when that release is publishe
 
 No unreleased changes.
 
+## 0.7.1 — 2026-11-15
+
+- Changed the default bundled release from `0.7.0` to stable `0.7.1` across
+  Docker, Compose, and environment examples.
+- Pinned the official `0.7.1` host asset and its published SHA-256 digest.
+- Added matching repository/image tags: `v0.7.1` and
+  `ps5-webkit-autoloader-dns:0.7.1` (local image).
+- Retained the `0.7.0` repository and image tags for the previous default.
+- Saved runtime selections continue to take precedence over the new default.
+
 ## 0.7.0 — 2026-11-15
 
 - Changed the default bundled release from `0.7.0-prerelease-2` to stable `0.7.0`

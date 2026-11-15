@@ -1,5 +1,5 @@
 # Keep the Python build and final runtime on the same Alpine release/ABI.
-ARG AUTOLOADER_VERSION=0.7.0
+ARG AUTOLOADER_VERSION=0.7.1
 FROM python:3.13-alpine3.24 AS python-runtime
 
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1

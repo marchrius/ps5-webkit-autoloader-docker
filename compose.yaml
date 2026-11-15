@@ -3,14 +3,14 @@ services:
     build:
       context: .
       args:
-        AUTOLOADER_VERSION: ${AUTOLOADER_VERSION:-0.7.0}
+        AUTOLOADER_VERSION: ${AUTOLOADER_VERSION:-0.7.1}
         AUTOLOADER_SHA256: ${AUTOLOADER_SHA256:-}
     image: ps5-webkit-autoloader-dns:local
     # This tag is built from source, not downloaded from a container registry.
     pull_policy: build
     restart: unless-stopped
     environment:
-      AUTOLOADER_VERSION: ${AUTOLOADER_VERSION:-0.7.0}
+      AUTOLOADER_VERSION: ${AUTOLOADER_VERSION:-0.7.1}
       AUTOLOADER_SHA256: ${AUTOLOADER_SHA256:-}
       AUTOLOADER_FORCE_UPDATE: ${AUTOLOADER_FORCE_UPDATE:-false}
       HOST_IP: ${HOST_IP:?Set HOST_IP in .env to a LAN IPv4 address reachable from the PS5}
