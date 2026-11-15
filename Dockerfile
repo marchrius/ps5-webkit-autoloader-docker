@@ -1,5 +1,5 @@
 # Keep the Python build and final runtime on the same Alpine release/ABI.
-ARG AUTOLOADER_VERSION=0.7.0-prerelease-2
+ARG AUTOLOADER_VERSION=0.7.0
 FROM python:3.13-alpine3.24 AS python-runtime
 
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
@@ -24,7 +24,8 @@ RUN python /tmp/fetch_release.py "${AUTOLOADER_VERSION}" "${AUTOLOADER_SHA256}"
 FROM alpine:3.24 AS runtime
 
 ARG AUTOLOADER_VERSION
-LABEL org.opencontainers.image.title="PS5 WebKit Autoloader DNS host" \
+LABEL org.opencontainers.image.version="${AUTOLOADER_VERSION}" \
+      org.opencontainers.image.title="PS5 WebKit Autoloader DNS host" \
       org.opencontainers.image.description="Local PSN DNS blocking and official WebKit installer hosting" \
       org.opencontainers.image.licenses="GPL-3.0-only"
 

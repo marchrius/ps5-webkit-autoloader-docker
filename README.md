@@ -3,7 +3,7 @@
 An always-on container providing UDP/TCP DNS, HTTP, and HTTPS. It blocks PSN,
 PlayStation updates, and telemetry, and serves the official installer from
 [itsPLK/ps5-webkit-autoloader](https://github.com/itsPLK/ps5-webkit-autoloader).
-The build downloads **v0.7.0-prerelease-2** (a pre-release/test build), including its embedded frontend and payloads.
+The build downloads **v0.7.0** (a stable release), including its embedded frontend and payloads.
 Copying the repository's frontend directory alone is insufficient because it
 requires generated artifacts. The bundled release can run offline. A different selected release or a forced update
 requires outbound HTTPS access; downloaded releases are cached in `/config/releases/`.
@@ -523,17 +523,25 @@ lower image layers. The Python standard library and HTTPS support are retained.
 
 ### Release updates
 
-The default is **v0.7.0-prerelease-2** (October 31, 2026), an upstream test
-build with internal changes focused on Relapse. Upstream describes automatic
-exploit selection by firmware and network status: Relapse above firmware 12.00
-through 13.60, Poops on 9.05, and otherwise Relapse with an active network
-connection or Poops offline on supported firmware up to 12.00. Console behavior
-still requires testing on the actual PS5.
+The default is **v0.7.0**, the stable upstream release published on November 6,
+2026. The downloader pins its official Python host asset and published SHA-256.
+The HTTP adapter serves the embedded frontend and payloads without modification.
+Console behavior still requires validation on the actual PS5.
 
-The release tag is `v0.7.0-prerelease-2`, but its Python asset and embedded
-version use `0.7.0-dev-3a34c3b`. The downloader pins that exact official asset
-and its published SHA-256. The existing HTTP adapter serves its embedded
-frontend and payloads without changes.
+Repository tag `v0.7.0` corresponds to the locally built image
+`ps5-webkit-autoloader-dns:0.7.0`. To reproduce it:
+
+```sh
+git checkout v0.7.0
+docker build -t ps5-webkit-autoloader-dns:0.7.0 .
+```
+
+Versioned image tags are local build artifacts, not published registry images.
+Compose continues to build its `:local` image. An existing saved selection takes
+precedence over the new default: choose the new release in `/admin/`, or set
+`AUTOLOADER_VERSION=0.7.0` and `AUTOLOADER_FORCE_UPDATE=true` when recreating the
+container. Reset the force flag to `false` afterward. Explicit versions in `.env`
+are also preserved; update them when upgrading the bundled version.
 
 Open **`http://HOST_IP/admin/`** in a LAN browser (use `HTTP_PORT` for a
 nonstandard published port). The page shows the selected release tag, actual
@@ -575,7 +583,7 @@ saved release intact but fails startup, so the requested override cannot silentl
 run a different version. HTTP requests already in progress may finish on the old
 release; subsequent connections use the new release. DNS does not restart.
 
-Releases 0.5.2, 0.6.1, 0.6.2, and 0.7.0-prerelease-2 use direct official
+Releases 0.5.2, 0.6.1, 0.6.2, 0.7.0-prerelease-2, and 0.7.0 use direct official
 asset URLs and verified SHA-256 digests without the GitHub API. Other explicit
 versions use the API to locate the Python asset and its published digest when
 available. `AUTOLOADER_SHA256` applies to downloads of the version named in
@@ -614,7 +622,7 @@ The build needs access to `github.com`, its release-asset redirect hosts, and
 these endpoints; changing or forcing a release does.
 
 For a Portainer stack built from this repository, select the updated commit,
-set `AUTOLOADER_VERSION=0.7.0-prerelease-2`, and rebuild/redeploy. No GitHub token is needed
+set `AUTOLOADER_VERSION=0.7.0`, and rebuild/redeploy. No GitHub token is needed
 for the pinned release.
 
 ## License
@@ -626,8 +634,9 @@ The upstream project and third-party components retain their respective
 licenses and attribution notices. The downloaded upstream license is at
 `/app/LICENSE.upstream`.
 
-Sources consulted on October 23 and November 1, 2026:
+Sources consulted on October 23, November 1, and November 15, 2026:
 
+- [Official stable v0.7.0 release](https://github.com/itsPLK/ps5-webkit-autoloader/releases/tag/v0.7.0).
 - [Official v0.7.0 pre-release 2 and assets](https://github.com/itsPLK/ps5-webkit-autoloader/releases/tag/v0.7.0-prerelease-2).
 - [Official host for the same version](https://github.com/itsPLK/ps5-webkit-autoloader/releases/download/v0.7.0-prerelease-2/webkit-autoloader-host_v0.7.0-dev-3a34c3b.py): User's Guide handling and embedded content.
 - [Al-Azif configuration](https://github.com/Al-Azif/ps4-exploit-host/blob/master/settings.json): PlayStation blocking suffixes and web entry domains.

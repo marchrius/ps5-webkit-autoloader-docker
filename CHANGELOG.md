@@ -6,6 +6,18 @@ changes. Move entries into a dated release section when that release is publishe
 
 ## Unreleased
 
+No unreleased changes.
+
+## 0.7.0 — 2026-11-15
+
+- Changed the default bundled release from `0.7.0-prerelease-2` to stable `0.7.0`
+  across Docker, Compose, and environment examples.
+- Pinned the official `0.7.0` host asset and its published SHA-256 digest.
+- Added the image version label and the matching repository/image tags:
+  `v0.7.0` and `ps5-webkit-autoloader-dns:0.7.0` (local image).
+- Existing saved selections remain authoritative; use the web administration page
+  or the forced-update environment setting to change an existing deployment.
+
 ### Runtime release management
 
 - Added a web administration page at `http://HOST_IP/admin/` to inspect the
