@@ -8,3 +8,7 @@ __pycache__
 **/__pycache__
 *.pyc
 tests
+
+# Runtime cache and persisted release selection must not enter the image.
+config/releases
+config/autoloader.json

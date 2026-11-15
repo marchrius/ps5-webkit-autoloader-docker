@@ -2,6 +2,10 @@
 import http.client
 import importlib.util
 import sys
+import shutil
+import tempfile
+import json
+from unittest.mock import patch
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
@@ -41,6 +45,25 @@ class WebIntegrationTests(unittest.TestCase):
             return response.status, dict(response.getheaders()), response.read()
         finally:
             conn.close()
+
+    def test_dynamic_release_activation_serves_official_frontend(self):
+        from releases import ReleaseManager
+        settings = Settings.load({"HOST_IP": "192.168.1.20"}, CONFIG)
+        with tempfile.TemporaryDirectory() as directory:
+            def download(version, digest, destination):
+                shutil.copyfile(self.web.upstream.__file__, destination / "upstream_host.py")
+            manager = ReleaseManager(Path(directory), env={"AUTOLOADER_VERSION": "0.6.2"})
+            with patch("releases.fetch_release", side_effect=download):
+                manager.start(lambda module: self.web.build_handler(settings, module, manager))
+                self.server.RequestHandlerClass = lambda *args: manager.handler(*args)
+                self.server.admin_scheme = "http"
+                self.assertEqual(self.get("/document/en/ps5/index.html")[0], 200)
+                self.assertEqual(self.get("/admin/", "192.168.1.20")[0], 200)
+                manager.install("0.5.2")
+                self.assertEqual(self.get("/document/en/ps5/index.html")[0], 200)
+                data = json.loads(self.get("/admin/api/version", "192.168.1.20")[2])
+                self.assertEqual(data["version"], "0.5.2")
+                self.assertEqual(data["installed_version"], self.web.upstream.VERSION)
 
     def test_guide_serves_embedded_index(self):
         status, headers, body = self.get("/document/en/ps5/index.html")

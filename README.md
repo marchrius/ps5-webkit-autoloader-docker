@@ -5,8 +5,8 @@ PlayStation updates, and telemetry, and serves the official installer from
 [itsPLK/ps5-webkit-autoloader](https://github.com/itsPLK/ps5-webkit-autoloader).
 The build downloads **v0.7.0-prerelease-2** (a pre-release/test build), including its embedded frontend and payloads.
 Copying the repository's frontend directory alone is insufficient because it
-requires generated artifacts. The container does not download updates at startup
-and can run without Internet access after the image has been built.
+requires generated artifacts. The bundled release can run offline. A different selected release or a forced update
+requires outbound HTTPS access; downloaded releases are cached in `/config/releases/`.
 
 ## Getting started
 
@@ -434,7 +434,8 @@ Settings in `.env`:
 | `DNS_MODE=offline` | Blocks all names except local exceptions; no DNS forwarding |
 | `UPSTREAM_DNS` | Comma-separated resolver IPs, default `1.1.1.1,9.9.9.9`; the dedicated `/32` pool variant requires a resolver on its LAN in selective mode |
 | `LOG_QUERIES=true` | Records DNS queries in Docker logs |
-| `AUTOLOADER_VERSION` | Explicit release or pre-release version downloaded during the build |
+| `AUTOLOADER_VERSION` | Build version and runtime fallback when no saved selection exists |
+| `AUTOLOADER_FORCE_UPDATE` | `true`: download the environment version and replace saved selection at every startup; default `false` |
 | `AUTOLOADER_SHA256` | Optional: expected digest of the release's host `.py` file |
 
 To apply `.env` changes, run `docker compose up -d --build`.
@@ -523,48 +524,62 @@ version use `0.7.0-dev-3a34c3b`. The downloader pins that exact official asset
 and its published SHA-256. The existing HTTP adapter serves its embedded
 frontend and payloads without changes.
 
-At each container startup, the logs print the version requested through
-`AUTOLOADER_VERSION` and the actual `VERSION` read from `/app/upstream_host.py`:
+Open **`http://HOST_IP/admin/`** in a LAN browser (use `HTTP_PORT` for a
+nonstandard published port). The page shows the selected release tag, actual
+embedded code version, environment version, and forced-update setting. Enter an
+explicit published version without `v`, then choose **Scarica e attiva** to
+install or downgrade immediately. The console frontend stays at its existing URLs.
+The administration page is available through the server IP or localhost only,
+not through the PlayStation entry domains. It is intended for a trusted LAN and
+has no login; LAN clients reaching the server IP can change the release.
 
-```text
-Autoloader requested (AUTOLOADER_VERSION): 0.7.0-prerelease-2
-Autoloader installed (/app/upstream_host.py): 0.7.0-dev-3a34c3b
-```
+Version selection at startup follows this order:
 
-Compose passes the selected version to both the build and runtime environment.
-For direct `docker run`, the environment defaults to the version used to build
-the image. Changing only the runtime ENV changes the requested-version log;
-rebuild the image to install another version. The pre-release tag and build
-version shown above identify the same official release.
+1. With `AUTOLOADER_FORCE_UPDATE=true`, download `AUTOLOADER_VERSION` again,
+   validate it, activate it, and overwrite the saved selection, even for the same version.
+2. Otherwise use the version saved in `/config/autoloader.json`.
+3. If no version is saved, use `AUTOLOADER_VERSION` (default: the image's bundled version).
 
-When upgrading an existing deployment, also update `AUTOLOADER_VERSION=0.7.0-prerelease-2`
-in its `.env` or Portainer environment: an explicit value overrides the new
-Compose default. If `AUTOLOADER_SHA256` is set, replace the old digest with
-`3817965cb6d092598bad064cb89176f18d3b1b309c5d31acfef04b2f8247db74`
-or leave it empty to use the checked-in verified digest. Rebuild and recreate
-with the same Compose files used by the deployment:
+`AUTOLOADER_FORCE_UPDATE` defaults to `false`; set it back to `false` after a
+forced deployment to avoid downloading on every restart. It requires an explicit
+valid `AUTOLOADER_VERSION`. Changing the environment requires container recreation:
 
 ```sh
 docker compose up -d --build --force-recreate
 ```
 
-To update, select an explicit published release or pre-release in `.env` and rebuild.
-Releases 0.5.2, 0.6.1, 0.6.2, and 0.7.0-prerelease-2 use direct official
-download URLs and checked-in,
-verified SHA-256 digests, without calling the GitHub API. Other versions use
-the API to discover the published Python asset and its digest when available. A nonexistent
-version produces an explicit error and is not replaced automatically.
-The integration handles the HTTP APIs of releases 0.5.2, 0.6.1, 0.6.2,
-and 0.7.0-prerelease-2.
-It does not use a moving `latest` reference. The actual digest and download URL
-are recorded in `/app/UPSTREAM.txt`; the upstream license is in `/app/LICENSE.upstream`.
-You can set a digest from a verified source in `AUTOLOADER_SHA256`.
-The integration does not modify the release's frontend or payload files.
-Distributing images containing the GPL-3.0 upstream software requires compliance
-with its license and corresponding source-code obligations.
+Compose mounts `./config:/config` writable so the selection and release files
+survive container recreation. The rest of the container filesystem stays read-only.
+Custom deployments must also provide a persistent writable `/config` mount.
+Keep `autoloader.json` and its referenced `releases/` directory together when
+backing up or moving a deployment. The first startup copies the bundled release
+without network access when it matches the selected version. Later startups reuse
+the cached code. A saved version without cached code is downloaded again.
+Invalid saved configuration fails startup with an error; a forced update can replace it.
 
-To return to the stable release, set `AUTOLOADER_VERSION=0.6.2`, clear any
-pre-release-specific `AUTOLOADER_SHA256`, and rebuild/recreate the container.
+Updates are downloaded and validated in a separate directory before the
+configuration and active handler change. Failed web updates preserve the previous
+configuration and running frontend. A failed forced startup update leaves the
+saved release intact but fails startup, so the requested override cannot silently
+run a different version. HTTP requests already in progress may finish on the old
+release; subsequent connections use the new release. DNS does not restart.
+
+Releases 0.5.2, 0.6.1, 0.6.2, and 0.7.0-prerelease-2 use direct official
+asset URLs and verified SHA-256 digests without the GitHub API. Other explicit
+versions use the API to locate the Python asset and its published digest when
+available. `AUTOLOADER_SHA256` applies to downloads of the version named in
+`AUTOLOADER_VERSION`; clear or update it when changing that version. A different
+release selected in the web page uses its pinned/published digest.
+The upstream adapter validates the embedded archive and supported handler API
+before activation. It does not modify the release's frontend or payload files.
+
+The download URL, digest, and license for each cached release are stored in its
+`/config/releases/<release-directory>/UPSTREAM.txt` and `LICENSE.upstream`.
+The image's bundled provenance remains in `/app/UPSTREAM.txt` and
+`/app/LICENSE.upstream`. Old cached releases remain available on disk; they are
+not automatically deleted. Do not remove the directory referenced by
+`autoloader.json`. Distributing upstream software requires compliance with its
+GPL license and corresponding source-code obligations.
 
 ### Portainer build failures
 
@@ -584,8 +599,8 @@ rate limit; the pinned default release avoids that API call entirely.
 An asset HTTP 404 can indicate a missing release or file, while DNS, connection,
 or certificate errors require checking outbound HTTPS access from the Docker host.
 The build needs access to `github.com`, its release-asset redirect hosts, and
-`raw.githubusercontent.com` for the upstream license. Runtime does not need
-these download endpoints.
+`raw.githubusercontent.com` for the upstream license. Cached runtime releases do not need
+these endpoints; changing or forcing a release does.
 
 For a Portainer stack built from this repository, select the updated commit,
 set `AUTOLOADER_VERSION=0.7.0-prerelease-2`, and rebuild/redeploy. No GitHub token is needed

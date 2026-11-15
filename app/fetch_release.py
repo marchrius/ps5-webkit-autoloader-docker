@@ -62,11 +62,15 @@ def download(url, description, timeout):
         raise ValueError(f"{description}: {exc.reason} ({url})") from None
 
 
-def main(version, expected_hash, output_dir=Path("/app")):
-    if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?", version):
+def validate_version(version):
+    if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?", version):
         raise ValueError(
             "AUTOLOADER_VERSION must be a release version, e.g. 0.6.2 or 0.7.0-prerelease-2"
         )
+
+
+def main(version, expected_hash, output_dir=Path("/app")):
+    validate_version(version)
     if expected_hash and not re.fullmatch(r"[0-9a-fA-F]{64}", expected_hash):
         raise ValueError("Invalid AUTOLOADER_SHA256")
     asset = release_asset(version)

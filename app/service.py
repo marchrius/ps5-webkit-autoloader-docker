@@ -1,5 +1,4 @@
 """Exit on child failure so Docker restarts DNS and web as one service."""
-import os
 import signal
 import subprocess
 import sys
@@ -12,11 +11,6 @@ from settings import Settings
 
 
 def main():
-    import upstream_host
-
-    print(f"Autoloader requested (AUTOLOADER_VERSION): "
-          f"{os.environ.get('AUTOLOADER_VERSION') or 'not set'}", flush=True)
-    print(f"Autoloader installed (/app/upstream_host.py): {upstream_host.VERSION}", flush=True)
     settings = Settings.load()
     conf = Path("/run/dnsmasq.conf")
     conf.write_text(settings.dnsmasq_config())
@@ -31,6 +25,8 @@ def main():
     try:
         children.append(subprocess.Popen(["dnsmasq", "--keep-in-foreground", f"--conf-file={conf}"]))
         children.append(subprocess.Popen([sys.executable, "/app/web.py"]))
+        startup_deadline = time.monotonic() + 240
+        ready = False
         next_check = time.monotonic() + 15
         failures = 0
         while not stop.wait(1):
@@ -42,8 +38,10 @@ def main():
                 try:
                     check()
                     failures = 0
+                    ready = True
                 except Exception as exc:
-                    failures += 1
+                    if ready or time.monotonic() >= startup_deadline:
+                        failures += 1
                     print(f"Service healthcheck failed ({failures}/3): {exc}", flush=True)
                 if failures >= 3:
                     result = 1

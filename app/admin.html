@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestione Autoloader</title><link rel="stylesheet" href="/admin/style.css">
+<script src="/admin/app.js" defer></script>
+</head>
+<body><main>
+<p class="eyebrow">PS5 · HOST LOCALE</p><h1>Gestione Autoloader</h1>
+<p>Controlla la versione attiva e scegli quale release eseguire.</p>
+<section aria-label="Versione attiva"><dl>
+<dt>Release selezionata</dt><dd id="version">Caricamento…</dd>
+<dt>Versione del codice</dt><dd id="installed">—</dd>
+<dt>Versione nell’ambiente</dt><dd id="environment">—</dd>
+<dt>Aggiornamento forzato all’avvio</dt><dd id="force">—</dd>
+</dl></section>
+<form id="release-form"><h2>Cambia versione</h2>
+<label for="release">Release ufficiale</label>
+<input id="release" name="version" required placeholder="0.7.0-prerelease-2" autocomplete="off" maxlength="100">
+<p class="hint">Inserisci il numero esatto, senza “v”. Puoi anche tornare a una release precedente.</p>
+<button id="install" type="submit" disabled>Scarica e attiva</button></form>
+<p id="message" role="status" aria-live="polite"></p>
+<p class="hint">La scelta viene salvata e mantenuta ai successivi avvii. Durante il download resta disponibile la versione attuale.</p>
+<a href="/">Apri Autoloader →</a>
+</main></body></html>

@@ -39,10 +39,11 @@ RUN apk add --no-cache $(cat /tmp/python-rundeps.txt) \
     && rm /tmp/python-rundeps.txt
 WORKDIR /app
 COPY --from=upstream-download /app/upstream_host.py /app/UPSTREAM.txt /app/LICENSE.upstream /app/
+RUN printf '%s\n' "$AUTOLOADER_VERSION" > /app/BUNDLED_VERSION
 COPY app/ /app/
 COPY config/ /config/
 COPY LICENSE /app/LICENSE
 EXPOSE 53/udp 53/tcp 80/tcp 443/tcp
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=240s --retries=3 \
   CMD ["python", "/app/healthcheck.py"]
 ENTRYPOINT ["/sbin/tini", "--", "python", "/app/service.py"]
