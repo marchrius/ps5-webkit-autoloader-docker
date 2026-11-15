@@ -536,7 +536,15 @@ git checkout v0.7.1
 docker build -t ps5-webkit-autoloader-dns:0.7.1 .
 ```
 
-Versioned image tags are local build artifacts, not published registry images.
+Versioned images are published by [GitHub Actions](.github/workflows/publish-images.yml)
+to `ghcr.io/marchrius/ps5-webkit-autoloader-docker` for `linux/amd64` and
+`linux/arm64`. Repository tag `v0.7.1` produces image tag `:0.7.1`; `v0.7.0`
+produces `:0.7.0`. Each image is built from its corresponding Git tag. The
+workflow uses the repository token with `packages: write`; no personal token is
+stored. Tag pushes publish future versions. A manual workflow run republishes
+the initial `0.7.0` and `0.7.1` images. Package visibility and pull access follow
+the GHCR package settings.
+
 Compose continues to build its `:local` image. An existing saved selection takes
 precedence over the new default: choose the new release in `/admin/`, or set
 `AUTOLOADER_VERSION=0.7.1` and `AUTOLOADER_FORCE_UPDATE=true` when recreating the

@@ -6,7 +6,9 @@ changes. Move entries into a dated release section when that release is publishe
 
 ## Unreleased
 
-No unreleased changes.
+- Added GHCR publication through GitHub Actions for versioned Git tags, with
+  `linux/amd64` and `linux/arm64` images. Initial publication builds `0.7.0` and
+  `0.7.1` from their respective repository tags using the repository token.
 
 ## 0.7.1 — 2026-11-15
 
