@@ -8,6 +8,17 @@ Copying the repository's frontend directory alone is insufficient because it
 requires generated artifacts. The bundled release can run offline. A different selected release or a forced update
 requires outbound HTTPS access; downloaded releases are cached in `/config/releases/`.
 
+## Runtime version management
+
+Open **`http://HOST_IP/admin/`** to inspect the running version and install or
+return to an explicit official release. The saved selection takes precedence over
+`AUTOLOADER_VERSION`; `AUTOLOADER_FORCE_UPDATE=true` forces the environment version
+and replaces the saved selection at each startup. Updates from the page take
+effect without restarting DNS.
+
+See [Release updates](#release-updates) for setup and operational details, and
+[Changelog](CHANGELOG.md) for new functionality and deployment changes.
+
 ## Getting started
 
 ### Devices with port 53 already in use: macvlan
